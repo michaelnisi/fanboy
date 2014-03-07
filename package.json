@@ -1,0 +1,42 @@
+{
+  "name": "fanboy",
+  "version": "0.0.0",
+  "description": "use iTunes search API",
+  "main": "index.js",
+  "directories": {
+    "example": "example",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "tap --tap test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/michaelnisi/fanboy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/michaelnisi/fanboy/issues"
+  },
+  "keywords": [
+    "itunes",
+    "search",
+    "api"
+  ],
+  "dependencies": {
+  },
+  "devDependencies": {
+    "tap": "0.4.x",
+    "levelup": "0.18.x",
+    "leveldown": "0.10.x"
+  },
+  "engines": {
+    "node": "0.11.x",
+    "node": "0.10.x"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Michael Nisi",
+    "email": "michael.nisi@gmail.com",
+    "url": "http://michaelnisi.com"
+  }
+}
