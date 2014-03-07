@@ -11,6 +11,7 @@ test('search', function (t) {
     t.end()
   })
   search.pipe(process.stderr)
+  search.end()
 })
 
 

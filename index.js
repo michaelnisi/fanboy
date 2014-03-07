@@ -4,11 +4,11 @@
 module.exports.Search = Search
 module.exports.SearchOpts = SearchOpts
 
-var stream = require('stream')
-  , util = require('util')
-  , https = require('https')
+var https = require('https')
   , querystring = require('querystring')
   , string_decoder = require('string_decoder')
+  , stream = require('stream')
+  , util = require('util')
 
 util.inherits(Search, stream.Transform)
 function Search (opts) {
@@ -37,8 +37,9 @@ Search.prototype._transform = function (chunk, enc, cb) {
     res.on('error', function (er) {
       cb(er)
     })
-    res.on('end', function (chunk) {
-      me.push(chunk)
+    res.once('end', function (chunk) {
+      res.removeAllListeners()
+      if (chunk) me.push(chunk)
       cb()
     })
   })
