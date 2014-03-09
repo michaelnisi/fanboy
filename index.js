@@ -5,6 +5,7 @@ module.exports.Search = Search
 module.exports.SearchOpts = SearchOpts
 
 var https = require('https')
+  , JSONStream = require('JSONStream')
   , querystring = require('querystring')
   , string_decoder = require('string_decoder')
   , stream = require('stream')
@@ -15,10 +16,20 @@ function Search (opts) {
   if (!(this instanceof Search)) return new Search(opts)
   stream.Transform.call(this)
   this.opts = opts || new SearchOpts()
+  this.log = opts.log
+  this.db = opts.db
 }
 
 Search.prototype.reqOpts = function (term) {
   return this.opts.reqOpts(term)
+}
+
+function json (obj) {
+  var result = {
+    title: obj.collectionName
+    // TODO: Fill object
+  }
+  return JSON.stringify(result)
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
@@ -28,10 +39,18 @@ Search.prototype._transform = function (chunk, enc, cb) {
     , me = this
 
   var req = https.request(opts, function (res) {
+    var str = JSONStream.stringify()
+    str.on('data', function (chunk) {
+      me.push(chunk)
+    })
+    var parser = JSONStream.parse('results.*')
+    parser.on('data', function (result) {
+      str.write(json(result))
+    })
     res.on('readable', function () {
       var chunk
       while (null !== (chunk = res.read())) {
-        me.push(chunk)
+        parser.write(chunk)
       }
     })
     res.on('error', function (er) {
@@ -39,7 +58,7 @@ Search.prototype._transform = function (chunk, enc, cb) {
     })
     res.once('end', function (chunk) {
       res.removeAllListeners()
-      if (chunk) me.push(chunk)
+      str.end()
       cb()
     })
   })
@@ -48,20 +67,30 @@ Search.prototype._transform = function (chunk, enc, cb) {
 
 // Search options object
 function SearchOpts (
-  hostname
+  media
+, hostname
 , port
 , method
 , path
 , term
-, media
 , country
 ) {
+  if (!(this instanceof SearchOpts)) {
+    return new SearchOpts(
+      media
+    , hostname
+    , port
+    , method
+    , path
+    , term
+    , country
+  )}
+  this.media = media       || 'all'
   this.hostname = hostname || 'itunes.apple.com'
   this.port = port         || 443
   this.method = method     || 'GET'
   this.path = path         || '/search'
   this.term = term         || '*'
-  this.media = media       || 'all'
   this.country = country   || 'us'
 }
 

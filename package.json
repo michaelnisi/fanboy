@@ -23,10 +23,11 @@
     "api"
   ],
   "dependencies": {
+    "levelup": "0.18.x",
+    "JSONStream": "0.8.x"
   },
   "devDependencies": {
     "tap": "0.4.x",
-    "levelup": "0.18.x",
     "leveldown": "0.10.x"
   },
   "engines": {

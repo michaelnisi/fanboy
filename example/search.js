@@ -1,11 +1,15 @@
 
-var Search = require('../').Search
+var fanboy = require('../')
 
-function term () {
-  return process.argv.splice(2)[0]
+function opts () {
+  return fanboy.SearchOpts('podcast')
 }
 
-var search = new Search()
+function term () {
+  return process.argv.splice(2)[0] || '*'
+}
+
+var search = fanboy.Search(opts())
 search.write(term(), 'utf8')
 search.pipe(process.stdout)
 search.end()
