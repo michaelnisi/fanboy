@@ -34,7 +34,7 @@ Search.prototype._transform = function (chunk, enc, cb) {
     })
     var parser = JSONStream.parse('results.*')
     parser.on('data', function (result) {
-      str.write(reduce(result))
+      str.write(reduce ? reduce(result) : result)
     })
     res.on('error', cb)
     res.once('end', function (chunk) {
@@ -78,12 +78,7 @@ function SearchOpts (
   this.path = path         || '/search'
   this.term = term         || '*'
   this.country = country   || 'us'
-  this.reduce = reduce || function (result) {
-    return new Result(
-      result.artistName
-    , result.collectionName
-    )
-  }
+  this.reduce = reduce
 }
 
 function mkpath (path, term, media, country) {
@@ -110,10 +105,4 @@ SearchOpts.prototype.reqOpts = function (term) {
 var decoder = new string_decoder.StringDecoder()
 function decode (buf) {
   return decoder.write(buf)
-}
-
-// Reduced search result object
-function Result (author, title) {
-  this.author = author
-  this.title = title
 }
