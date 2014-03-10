@@ -1,7 +1,4 @@
 
-
-// TODO: search_tests.js
-
 var test = require('tap').test
   , Search = require('../').Search
 

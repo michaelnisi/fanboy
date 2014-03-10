@@ -16,8 +16,6 @@ function Search (opts) {
   if (!(this instanceof Search)) return new Search(opts)
   stream.Transform.call(this)
   this.opts = opts || new SearchOpts()
-  this.log = opts.log
-  this.db = opts.db
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
