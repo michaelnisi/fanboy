@@ -20,22 +20,11 @@ function Search (opts) {
   this.db = opts.db
 }
 
-Search.prototype.reqOpts = function (term) {
-  return this.opts.reqOpts(term)
-}
-
-function json (obj) {
-  var result = {
-    title: obj.collectionName
-    // TODO: Fill object
-  }
-  return JSON.stringify(result)
-}
-
 Search.prototype._transform = function (chunk, enc, cb) {
   // TODO: Emit term suggestions
   var term = decode(chunk)
-    , opts = this.reqOpts(term)
+    , opts = this.opts.reqOpts(term)
+    , reduce = this.opts.reduce
     , me = this
 
   var req = https.request(opts, function (res) {
@@ -45,22 +34,17 @@ Search.prototype._transform = function (chunk, enc, cb) {
     })
     var parser = JSONStream.parse('results.*')
     parser.on('data', function (result) {
-      str.write(json(result))
+      str.write(reduce(result))
     })
-    res.on('readable', function () {
-      var chunk
-      while (null !== (chunk = res.read())) {
-        parser.write(chunk)
-      }
-    })
-    res.on('error', function (er) {
-      cb(er)
-    })
+    res.on('error', cb)
     res.once('end', function (chunk) {
-      res.removeAllListeners()
       str.end()
+      ;[res, str, parser].forEach(function (stream) {
+        stream.removeAllListeners()
+      })
       cb()
     })
+    res.pipe(parser)
   })
   req.end()
 }
@@ -74,6 +58,7 @@ function SearchOpts (
 , path
 , term
 , country
+, reduce
 ) {
   if (!(this instanceof SearchOpts)) {
     return new SearchOpts(
@@ -84,6 +69,7 @@ function SearchOpts (
     , path
     , term
     , country
+    , reduce
   )}
   this.media = media       || 'all'
   this.hostname = hostname || 'itunes.apple.com'
@@ -92,6 +78,12 @@ function SearchOpts (
   this.path = path         || '/search'
   this.term = term         || '*'
   this.country = country   || 'us'
+  this.reduce = reduce || function (result) {
+    return new Result(
+      result.artistName
+    , result.collectionName
+    )
+  }
 }
 
 function mkpath (path, term, media, country) {
@@ -120,3 +112,8 @@ function decode (buf) {
   return decoder.write(buf)
 }
 
+// Reduced search result object
+function Result (author, title) {
+  this.author = author
+  this.title = title
+}
