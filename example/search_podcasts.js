@@ -1,5 +1,15 @@
 
+// search_podcasts - search podcasts
+// usage: node example/search_podcasts.js gruber | json -a author
+
 var fanboy = require('../')
+  , levelup = require('levelup')
+  , assert = require('assert')
+  , bunyan = require('bunyan')
+
+function loc () {
+  return '/tmp/fanboy'
+}
 
 function Result (
   author
@@ -32,13 +42,25 @@ function reduce (result) {
   , result.artworkUrl60
   , result.artworkUrl600
   , result.collectionName
-  , result.releaseDate
+  , new Date(result.releaseDate).getTime()
   )
 }
 
-function opts () {
+function log () {
+  return bunyan.createLogger({
+    name: 'fanboy'
+  , streams: [{
+      level: 'error',
+      path: '/tmp/fanboy.log'
+    }]
+  })
+}
+
+function opts (db) {
   var opts = fanboy.SearchOpts('podcast')
   opts.reduce = reduce
+  opts.db = db
+  opts.log = log()
   return opts
 }
 
@@ -46,7 +68,12 @@ function term () {
   return process.argv.splice(2)[0] || '*'
 }
 
-var search = fanboy.Search(opts())
-search.write(term(), 'utf8')
-search.pipe(process.stdout)
-search.end()
+function start (er, db) {
+  assert(!er, er)
+  var search = fanboy.Search(opts(db))
+  search.write(term(), 'utf8')
+  search.pipe(process.stdout)
+  search.end()
+}
+
+levelup(loc(), null, start)
