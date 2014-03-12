@@ -1,22 +1,128 @@
 
 // fanboy - search itunes store
 
-module.exports.Search = Search
-module.exports.SearchOpts = SearchOpts
+module.exports.search = Search
+module.exports.opts = SearchOpts
+module.exports.terms = SearchTerms
 
 var https = require('https')
   , JSONStream = require('JSONStream')
-  , querystring = require('querystring')
-  , string_decoder = require('string_decoder')
-  , stream = require('stream')
-  , util = require('util')
   , keys = require('./lib/keys')
+  , querystring = require('querystring')
+  , stream = require('stream')
+  , string_decoder = require('string_decoder')
+  , util = require('util')
+
+var debug
+if (process.env.NODE_DEBUG || process.env.NODE_TEST) {
+  debug = function (o) { console.error('**fanboy: %s', o) }
+} else {
+  debug = function () { }
+}
+
+// Stream of stored search terms
+// - db levelup()
+util.inherits(SearchTerms, stream.Transform)
+function SearchTerms (db) {
+  if (!(this instanceof SearchTerms)) return new SearchTerms(db)
+  stream.Transform.call(this)
+  this.db = db
+}
+
+function keyStream (db, term) {
+  return db.createKeyStream(keys.range(keys.TRM, term))
+}
+
+SearchTerms.prototype._transform = function (chunk, enc, cb) {
+  var stream = keyStream(this.db, chunk)
+    , me = this
+  stream.on('readable', function () {
+    var key
+    while (null !== (key = stream.read())) {
+      me.push(key)
+    }
+  })
+  stream.on('error', function (er) {
+    cb(er)
+  })
+  stream.once('end', function () {
+    cb()
+  })
+}
 
 util.inherits(Search, stream.Transform)
 function Search (opts) {
   if (!(this instanceof Search)) return new Search(opts)
   stream.Transform.call(this)
-  this.opts = opts || new SearchOpts()
+  this.opts = opts || SearchOpts()
+  this.log = this.opts.log
+}
+
+Search.prototype.requestResult = function (term, cb) {
+  var opts = this.opts
+    , reduce = opts.reduce
+    , db = opts.db
+    , me = this
+    , results = []
+
+  var req = https.request(opts.reqOpts(term), function (res) {
+    var str = JSONStream.stringify()
+    str.on('data', function (chunk) {
+      me.push(chunk)
+    })
+    var parser = JSONStream.parse('results.*')
+    parser.on('data', function (obj) {
+      var result = reduce ? reduce(obj) : obj
+      results.push(result)
+      str.write(result)
+    })
+    res.on('error', cb)
+    res.once('end', function (chunk) {
+      putTerm(db, term, results, function (er, key) {
+        results = null
+        str.end()
+        ;[res, str, parser].forEach(function (stream) {
+          stream.removeAllListeners()
+        })
+        cb()
+      })
+    })
+    res.pipe(parser)
+  })
+  req.end()
+}
+
+function stale (value, ttl) {
+  return new Date().getTime() - value.time > ttl
+}
+
+Search.prototype._transform = function (chunk, enc, cb) {
+  var term = decode(chunk)
+    , me = this
+    , opts = this.opts
+
+  getResult(opts.db, term, function (er, value) {
+    if (value && !stale(value, opts.ttl)) {
+      me.push(value)
+      cb()
+    } else {
+      me.requestResult(term, cb)
+    }
+  })
+}
+
+Search.prototype.toString = function () {
+  return ['fanboy ', this.constructor.name].join()
+}
+
+Search.prototype.error = function (x) {
+  if (this.log) this.log.error(x)
+  debug(x)
+}
+
+Search.prototype.info = function (x) {
+  if (this.log) this.log.info(x)
+  debug(x)
 }
 
 function ResultValue (time, json) {
@@ -44,93 +150,45 @@ function getResult(db, term, cb) {
   })
 }
 
-Search.prototype.requestResult = function (term, cb) {
-  var opts = this.opts.reqOpts(term)
-    , reduce = this.opts.reduce
-    , db = this.opts.db
-    , me = this
-    , results = []
-
-  var req = https.request(opts, function (res) {
-    var str = JSONStream.stringify()
-    str.on('data', function (chunk) {
-      me.push(chunk)
-    })
-    var parser = JSONStream.parse('results.*')
-    parser.on('data', function (obj) {
-      var result = reduce ? reduce(obj) : obj
-      results.push(result)
-      str.write(result)
-    })
-    res.on('error', cb)
-    res.once('end', function (chunk) {
-      putTerm(db, term, results, function (er, key) {
-        results = null
-        str.end()
-        ;[res, str, parser].forEach(function (stream) {
-          stream.removeAllListeners()
-        })
-        cb()
-      })
-    })
-    res.pipe(parser)
-  })
-  req.end()
-}
-
-Search.prototype._transform = function (chunk, enc, cb) {
-  // TODO: Emit term suggestions
-  var term = decode(chunk)
-    , me = this
-    , db = this.opts.db
-
-  getResult(db, term, function (er, value) {
-    if (value) {
-      me.push(value)
-      cb()
-    } else {
-      me.requestResult(term, cb)
-    }
-  })
-
-}
-
 // Search options object
 function SearchOpts (
-  media
+  country
+, db
 , hostname
-, port
+, log
+, media
 , method
 , path
-, term
-, country
+, port
 , reduce
-, db
-, log
+, term
+, ttl
 ) {
   if (!(this instanceof SearchOpts)) {
     return new SearchOpts(
-      media
+      country
+    , db
     , hostname
-    , port
+    , log
+    , media
     , method
     , path
-    , term
-    , country
+    , port
     , reduce
-    , db
-    , log
+    , term
+    , ttl
   )}
-  this.media = media       || 'all'
-  this.hostname = hostname || 'itunes.apple.com'
-  this.port = port         || 443
-  this.method = method     || 'GET'
-  this.path = path         || '/search'
-  this.term = term         || '*'
-  this.country = country   || 'us'
-  this.reduce = reduce
+  this.country = country || 'us'
   this.db = db
+  this.hostname = hostname || 'itunes.apple.com'
   this.log = log
+  this.media = media || 'all'
+  this.method = method || 'GET'
+  this.path = path || '/search'
+  this.port = port || 443
+  this.reduce = reduce
+  this.term = term || '*'
+  this.ttl = ttl || 3 * 3600000
 }
 
 function mkpath (path, term, media, country) {
@@ -143,6 +201,7 @@ function mkpath (path, term, media, country) {
 }
 
 // HTTP request options
+// - term The search term
 SearchOpts.prototype.reqOpts = function (term) {
   return {
     hostname: this.hostname

@@ -1,6 +1,5 @@
 
-// search_podcasts - search podcasts
-// usage: node example/search_podcasts.js gruber | json -a author
+// node example/search_podcasts.js mule | json -a title
 
 var fanboy = require('../')
   , levelup = require('levelup')
@@ -57,7 +56,8 @@ function log () {
 }
 
 function opts (db) {
-  var opts = fanboy.SearchOpts('podcast')
+  var opts = fanboy.opts()
+  opts.media = 'podcast'
   opts.reduce = reduce
   opts.db = db
   opts.log = log()
@@ -70,7 +70,7 @@ function term () {
 
 function start (er, db) {
   assert(!er, er)
-  var search = fanboy.Search(opts(db))
+  var search = fanboy.search(opts(db))
   search.write(term(), 'utf8')
   search.pipe(process.stdout)
   search.end()
