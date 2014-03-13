@@ -2,22 +2,39 @@
 var test = require('tap').test
   , keys = require('../lib/keys')
 
-test('keys', function (t) {
+test('key', function (t) {
   var f = keys.key
-  t.plan(5)
+  t.plan(6)
   t.throws(function () { f(null) })
   t.throws(function () { f(undefined) })
   t.throws(function () { f('WTF') })
   t.throws(function () { f('WTF', 'thing') })
   var wanted = [
-    'trm\u0000abc'
+    'fnb\x00trm\x00abc'
+  , 'fnb\x00res\x00123'
   ]
   ;[
     f(keys.TRM, 'abc')
+  , f(keys.RES, 123)
   ].forEach(function (found, i) {
     t.is(found, wanted[i])
   })
   t.end()
 })
 
+test('range', function (t) {
+  var f = keys.range
+  t.plan(2)
+  var wanted = [
+    { start:'fnb\x00trm\x00abc', end:'fnb\x00trm\x00abcÿ', limit:10 }
+  , { start: 'fnb\x00res\x00123', end:'fnb\x00res\x00123ÿ', limit:10 }
+  ]
+  ;[
+    f(keys.TRM, 'abc')
+  , f(keys.RES, 123)
+  ].forEach(function (found, i) {
+    t.deepEqual(found, wanted[i])
+  })
+  t.end()
+})
 

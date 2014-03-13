@@ -1,7 +1,7 @@
 
 # fanboy - search itunes store
 
-The fanboy [Node.js](http://nodejs.org/) module implements cached search of the itunes store.
+The fanboy [Node.js](http://nodejs.org/) module implements cached search of the itunes store. 
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.png)](http://travis-ci.org/michaelnisi/fanboy) [![David DM](https://david-dm.org/michaelnisi/fanboy.png)](http://david-dm.org/michaelnisi/fanboy)
 
@@ -12,29 +12,31 @@ The fanboy [Node.js](http://nodejs.org/) module implements cached search of the 
 var fanboy = require('fanboy')
   , levelup = require('levelup')
   , assert = require('assert')
-  , bunyan = require('bunyan')
-
-function loc () {
-  return '/tmp/fanboy'
-}
-
-function opts (db) {
-  var opts = fanboy.opts()
-  opts.media = 'podcast'
-  opts.db = db
-  return opts
-}
 
 function term () {
   return process.argv.splice(2)[0] || '*'
 }
 
+function log () {
+  return null
+}
+
+function opts () {
+  var opts = fanboy.opts()
+  opts.media = 'podcast'
+  return opts
+}
+
 function start (er, db) {
   assert(!er, er)
-  var search = fanboy.search(opts(db))
+  var search = fanboy.search(db, log(), opts())
   search.write(term(), 'utf8')
   search.pipe(process.stdout)
   search.end()
+}
+
+function loc () {
+  return '/tmp/fanboy'
 }
 
 levelup(loc(), null, start)
@@ -61,6 +63,8 @@ node example/search_podcasts.js mule | json -a title
 
 ### terms(db())
 
+### lookup(db())
+
 ## License
 
-[MIT License](https://raw.github.com/michaelnisi/fanboy/master/LICENSE)
+[MIT License](https://github.com/michaelnisi/fanboy/blob/master/LICENSE)

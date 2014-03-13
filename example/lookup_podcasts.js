@@ -1,6 +1,4 @@
 
-// node example/search_podcasts.js mule | json -a title
-
 var fanboy = require('../')
   , levelup = require('levelup')
   , assert = require('assert')
@@ -35,10 +33,10 @@ function term () {
 
 function start (er, db) {
   assert(!er, er)
-  var search = fanboy.search(db, log(), opts())
-  search.write(term(), 'utf8')
-  search.pipe(process.stdout)
-  search.end()
+  var lookup = fanboy.lookup(db, log(), opts())
+  lookup.write('537879700', 'utf8')
+  lookup.pipe(process.stdout)
+  lookup.end()
 }
 
 levelup(loc(), null, start)

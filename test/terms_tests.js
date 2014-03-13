@@ -53,9 +53,9 @@ test('terms', function (t) {
     terms.end()
     terms.once('end', function () {
       var wanted = [
-        'trm\x00abc'
-      , 'trm\x00abc'
-      , 'trm\x00abc'
+        'fnb\x00trm\x00abc'
+      , 'fnb\x00trm\x00abc'
+      , 'fnb\x00trm\x00abc'
       ]
       t.deepEqual(found, wanted)
       t.end()
