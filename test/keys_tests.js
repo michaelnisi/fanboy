@@ -38,3 +38,24 @@ test('range', function (t) {
   t.end()
 })
 
+test('trim', function (t) {
+  var f = keys.trim
+  t.plan(5)
+  var wanted = [
+    'abc'
+  , 'abc'
+  , 'abc'
+  , 'abc def'
+  , 'abc def'
+  ]
+  ;[
+    f('abc')
+  , f(' abc')
+  , f(' abc ')
+  , f(' abc def ')
+  , f(' abc  def ')
+  ].forEach(function (found, i) {
+    t.deepEqual(found, wanted[i])
+  })
+  t.end()
+})
