@@ -36,9 +36,8 @@ function term () {
 function start (er, db) {
   assert(!er, er)
   var lookup = fanboy.lookup(opts(db))
-  lookup.write('537879700', 'utf8')
-  lookup.write('537879700', 'utf8')
   lookup.pipe(process.stdout)
+  lookup.write('537879700', 'utf8')
   lookup.end()
 }
 

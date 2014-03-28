@@ -42,7 +42,7 @@ test('terms', function (t) {
     var terms = fanboy.terms({ db:db })
     terms.on('readable', function () {
       var chunk
-      while (null !== (chunk = terms.read())){
+      while (null !== (chunk = terms.read())) {
         found.push(decode(chunk))
       }
     })
@@ -50,16 +50,16 @@ test('terms', function (t) {
     terms.write('ab')
     terms.write('abc')
     terms.write('abcd')
-    terms.end()
-    terms.once('end', function () {
+    terms.once('finish', function () {
       var wanted = [
-        'fnb\x00trm\x00abc'
-      , 'fnb\x00trm\x00abc'
-      , 'fnb\x00trm\x00abc'
+        'fnb\x00trm\x00abc\n'
+      , 'fnb\x00trm\x00abc\n'
+      , 'fnb\x00trm\x00abc\n'
       ]
       t.deepEqual(found, wanted)
       t.end()
     })
+    terms.end()
   })
 })
 

@@ -62,8 +62,8 @@ Fanboy.prototype.pushJSON = function (chunk) {
 }
 
 Fanboy.prototype._flush = function () {
+  if (this.state) this.push(']\n')
   this.state = 0
-  this.push(']')
 }
 
 function release (emitters) {
@@ -280,6 +280,7 @@ util.inherits(SearchTerms, Fanboy)
 function SearchTerms (opts) {
   if (!(this instanceof SearchTerms)) return new SearchTerms(opts)
   Fanboy.call(this, opts)
+  this.state = undefined
 }
 
 function keyStream (db, term) {
@@ -287,19 +288,17 @@ function keyStream (db, term) {
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
-  var stream = keyStream(this.db, chunk)
-    , me = this
+  var me = this
+    , stream = keyStream(this.db, chunk)
 
   stream.on('readable', function () {
     var key
     while (null !== (key = stream.read())) {
-      me.pushJSON(key)
+      me.push(key += '\n')
     }
-  })
-  stream.on('error', function (er) {
+  }).on('error', function (er) {
     cb(er)
-  })
-  stream.once('end', function () {
+  }).once('end', function () {
     stream.removeAllListeners()
     cb()
   })

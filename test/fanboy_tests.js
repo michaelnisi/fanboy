@@ -19,7 +19,7 @@ test('Lookup', function (t) {
 })
 
 test('Fanboy', function (t) {
-  t.plan(16)
+  t.plan(17)
   var f = fanboy.base
   var obj = f()
   t.ok(obj instanceof f)
@@ -38,9 +38,20 @@ test('Fanboy', function (t) {
   t.is(obj.log, undefined)
   t.is(obj.country, 'us')
   t.is(obj.path, '/search')
+  t.is(obj.state, 0)
   t.end()
 })
 
+test('state', function (t) {
+  t.plan(2)
+  var f = fanboy.base
+  var obj = f()
+  t.is(obj.state, 0)
+  obj.state = 1
+  obj.end()
+  t.is(obj.state, 0)
+  t.end()
+})
 
 test('Search', function (t) {
   t.plan(8)
