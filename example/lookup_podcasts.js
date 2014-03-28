@@ -20,10 +20,12 @@ function log () {
   })
 }
 
-function opts () {
-  var opts = fanboy.opts()
+function opts (db) {
+  var opts = Object.create(null)
   opts.media = 'podcast'
   opts.reduce = reduce
+  opts.db = db
+  opts.log = log()
   return opts
 }
 
@@ -33,7 +35,8 @@ function term () {
 
 function start (er, db) {
   assert(!er, er)
-  var lookup = fanboy.lookup(db, log(), opts())
+  var lookup = fanboy.lookup(opts(db))
+  lookup.write('537879700', 'utf8')
   lookup.write('537879700', 'utf8')
   lookup.pipe(process.stdout)
   lookup.end()

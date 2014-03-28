@@ -39,7 +39,7 @@ test('terms', function (t) {
     , found = []
   db.batch(puts(), function (er) {
     t.ok(!er)
-    var terms = fanboy.terms(db)
+    var terms = fanboy.terms({ db:db })
     terms.on('readable', function () {
       var chunk
       while (null !== (chunk = terms.read())){

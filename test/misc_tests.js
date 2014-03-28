@@ -2,36 +2,26 @@
 var test = require('tap').test
   , fanboy = require('../')
 
-test('parse', function (t) {
-  var f = fanboy.parse
-  t.plan(3)
-  t.throws(function () { f(undefined) })
-  t.throws(function () { f(null) })
-  var wanted = [
-    [123, '[']
+test('putOps', function (t) {
+  var f = fanboy.putOps
+  t.plan(1)
+  var results = [
+    { guid:12 }
+  , { guid:34 }
+  , { guid:56 }
   ]
-  ;[
-    f('123[')
-  ].forEach(function (found, i) {
-    t.deepEqual(found, wanted[i])
-  })
-  t.end()
-})
-
-test('stringify', function (t) {
-  var f = fanboy.stringify
-  t.plan(4)
-  t.throws(function () { f(undefined) })
-  t.throws(function () { f(null) })
-  t.ok(!!f)
-  var now = new Date().getTime()
-  var wanted = [
-    [parseInt(now), '[{"title":"abc"}]'].join('')
+  var keys = [
+    'fnb\x00res\x0012'
+  , 'fnb\x00res\x0034'
+  , 'fnb\x00res\x0056'
   ]
-  ;[
-    f([{title:'abc'}], now)
-  ].forEach(function (found, i) {
-    t.deepEqual(found, wanted[i])
-  })
+  var wanted = [
+    { type:'put', key:keys[0], value:JSON.stringify(results[0]) }
+  , { type:'put', key:keys[1], value:JSON.stringify(results[1]) }
+  , { type:'put', key:keys[2], value:JSON.stringify(results[2]) }
+  , { type:'put', key:'fnb\x00trm\x00abc', value:keys}
+  ]
+  var found = f('abc', results)
+  t.deepEqual(found, wanted)
   t.end()
 })
