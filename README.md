@@ -1,7 +1,7 @@
 
-# fanboy - search itunes store
+# fanboy - search iTunes store
 
-The fanboy [Node.js](http://nodejs.org/) module implements cached search of the itunes store. 
+The fanboy [Node.js](http://nodejs.org/) module implements cached search of the iTunes store. 
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.png)](http://travis-ci.org/michaelnisi/fanboy) [![David DM](https://david-dm.org/michaelnisi/fanboy.png)](http://david-dm.org/michaelnisi/fanboy)
 
