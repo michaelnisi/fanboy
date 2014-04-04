@@ -275,6 +275,7 @@ function stale (time, ttl) {
 Search.prototype.keysForTerm = function (term, cb) {
   var db = this.db
     , ttl = this.ttl
+    , me = this
 
   db.get(termKey(term), function (er, value) {
     var keys
@@ -282,7 +283,9 @@ Search.prototype.keysForTerm = function (term, cb) {
       try {
         keys = JSON.parse(value)
         if (stale(keys.shift(), ttl)) keys = null
-      } catch (er) {}
+      } catch (er) {
+        me.error(er)
+      }
     }
     cb(er, keys)
   })

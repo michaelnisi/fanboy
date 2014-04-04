@@ -15,18 +15,21 @@ The fanboy [Node.js](http://nodejs.org/) module implements cached search of the 
 
 ## exports
 
-### opts(country, db, hostname, log, media, method, path, port, reduce, term, ttl)
-- country country || 'us'
+### opts()
+The options for the fanboy store.
+```js
+- country String() | 'us'
 - db db()
-- hostname hostname || 'itunes.apple.com'
+- hostname String() | 'itunes.apple.com'
 - log log()
-- media = media || 'all'
-- method method || 'GET'
-- path path || '/search'
-- port port || 443
-- reduce reduce || function
-- term term || '*'
-- ttl ttl || 72 * 3600000
+- media = String() | 'all'
+- method String() | 'GET'
+- path String() | '/search'
+- port Number() | 443
+- reduce function
+- term String() | '*'
+- ttl Number() | 72 * 3600000
+```
 
 ### search(opts())
 
