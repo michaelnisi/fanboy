@@ -8,13 +8,17 @@ module.exports.terms = SearchTerms
 if (process.env.NODE_TEST) {
   module.exports.base = Fanboy
   module.exports.putOps = putOps
+  module.exports.termOp = termOp
+  module.exports.resOp = resOp
 }
 
 var assert = require('assert')
   , https = require('https')
+  , http = require('http')
   , JSONStream = require('JSONStream')
   , keys = require('./lib/keys')
   , querystring = require('querystring')
+  , reduce = require('./lib/reduce')
   , stream = require('stream')
   , string_decoder = require('string_decoder')
   , util = require('util')
@@ -24,11 +28,6 @@ if (process.env.NODE_DEBUG || process.env.NODE_TEST) {
   debug = function (o) { console.error('**fanboy: %s', util.inspect(o)) }
 } else {
   debug = function () { }
-}
-
-// Default for user provided fun
-function reduce (obj) {
-  return obj
 }
 
 function defaults (opts) {
@@ -55,14 +54,14 @@ function Fanboy (opts) {
   this.state = 0
 }
 
-var tokens = ['[', ',']
+var tokens = ['[', ',', ']\n']
 Fanboy.prototype.pushJSON = function (chunk) {
   this.push(tokens[this.state] + chunk)
   this.state = 1
 }
 
 Fanboy.prototype._flush = function () {
-  if (this.state) this.push(']\n')
+  if (this.state) this.push(tokens[2])
   this.state = 0
 }
 
@@ -79,37 +78,46 @@ function BWOp (type, key, value) {
   this.value = value
 }
 
-function resOp (result) {
+function termKey (term) {
+  return keys.key(keys.TRM, term)
+}
+
+function termOp (term, keys, now) {
+  now = now || Date.now()
+  var key = termKey(term)
+    , val = JSON.stringify([now].concat(keys))
+  return new BWOp('put', key, val)
+}
+
+function resOp (result, now) {
+  now = now || Date.now()
+  result.ts = now
   var key = resKey(result.guid)
     , val = JSON.stringify(result)
   return new BWOp('put', key, val)
 }
 
-function termKey (term) {
-  return keys.key(keys.TRM, term)
-}
-
-function termOp (term, keys) {
-  return new BWOp('put', termKey(term), keys)
-}
-
-function putOps (term, results) {
+function putOps (term, results, now) {
   var op
     , ops = []
     , keys = []
   results.forEach(function (result) {
-    op = resOp(result)
+    op = resOp(result, now)
     ops.push(op)
     keys.push(op.key)
   })
-  ops.push(termOp(term, keys))
+  ops.push(termOp(term, keys, now))
   return ops
 }
 
 function put (db, term, results, cb) {
-  db.batch(putOps(term, results), function (er) {
-    cb(er)
-  })
+  if (results && results.length) {
+    db.batch(putOps(term, results), function (er) {
+      cb(er)
+    })
+  } else {
+    cb(null)
+  }
 }
 
 function decorate (obj, path, term) {
@@ -156,25 +164,41 @@ Fanboy.prototype.request = function (term, cb) {
     , reduce = this.reduce
     , db = this.db
     , results = [] // Collect for batch-write
+    , bolted = false
+    , httpModule = opts.port === 443 ? https : http
 
-  https.request(opts, function (res) {
+  function bolt (er) {
+    me.error(er)
+    if (bolted) return
+    me.emit('error', er)
+    me.end()
+    bolted = true
+  }
+
+  var req = httpModule.request(opts, function (res) {
     var parser = JSONStream.parse('results.*')
     parser.on('data', function (obj) {
+      assert(obj)
       var result = reduce(obj)
       results.push(result)
       me.pushJSON(JSON.stringify(result))
     })
-    res.on('error', cb)
+    parser.on('error', bolt)
+
+    res.on('error', bolt)
     res.once('end', function (chunk) {
       put(db, term, results, function (er) {
         if (er) me.error(er)
         results = null
       })
-      release([res, parser])
       cb()
+      me.end() // TODO: Do we explicitly need to end?
+      release([req, res, parser])
     })
     res.pipe(parser)
-  }).end()
+  })
+  req.on('error', bolt)
+  req.end()
 }
 
 Fanboy.prototype.toString = function () {
@@ -244,12 +268,20 @@ function Search (opts) {
   Fanboy.call(this, opts)
 }
 
-function keysForTerm (db, term, cb) {
+function stale (time, ttl) {
+  return Date.now() - time > ttl
+}
+
+Search.prototype.keysForTerm = function (term, cb) {
+  var db = this.db
+    , ttl = this.ttl
+
   db.get(termKey(term), function (er, value) {
     var keys
     if (value) {
       try {
         keys = JSON.parse(value)
+        if (stale(keys.shift(), ttl)) keys = null
       } catch (er) {}
     }
     cb(er, keys)
@@ -257,7 +289,16 @@ function keysForTerm (db, term, cb) {
 }
 
 Search.prototype.resultsForKeys = function (keys, cb) {
-  cb()
+  var me = this
+    , db = this.db
+
+  ;(function get (keys) {
+    if (!keys.length) return cb
+    db.get(keys.shift(), function (er, val) {
+      if (!er && val) me.pushJSON(val)
+      get(keys)
+    })
+  })(keys)
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
@@ -266,12 +307,8 @@ Search.prototype._transform = function (chunk, enc, cb) {
     , db = this.db
 
   keysForTerm(db, term, function (er, keys) {
-    if (er) me.error(er)
-    if (keys) {
-      me.resultsForKeys(keys, cb)
-    } else {
-      me.request(term, cb)
-    }
+    if (er && !er.notFound) me.error(er)
+    keys ? me.resultsForKeys(keys, cb) : me.request(term, cb)
   })
 }
 
@@ -280,7 +317,6 @@ util.inherits(SearchTerms, Fanboy)
 function SearchTerms (opts) {
   if (!(this instanceof SearchTerms)) return new SearchTerms(opts)
   Fanboy.call(this, opts)
-  this.state = undefined
 }
 
 function keyStream (db, term) {
@@ -289,11 +325,11 @@ function keyStream (db, term) {
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
   var me = this
-    , stream = keyStream(this.db, chunk)
-
-  stream.on('readable', function () {
+  var stream = keyStream(this.db, chunk)
+  .on('readable', function () {
     var key
     while (null !== (key = stream.read())) {
+      // TODO: Format
       me.push(key += '\n')
     }
   }).on('error', function (er) {
@@ -303,3 +339,4 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     cb()
   })
 }
+

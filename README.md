@@ -5,65 +5,32 @@ The fanboy [Node.js](http://nodejs.org/) module implements cached search of the 
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.png)](http://travis-ci.org/michaelnisi/fanboy) [![David DM](https://david-dm.org/michaelnisi/fanboy.png)](http://david-dm.org/michaelnisi/fanboy)
 
-## Usage
-
-### Search podcasts
-```js
-var fanboy = require('fanboy')
-  , levelup = require('levelup')
-  , assert = require('assert')
-
-function term () {
-  return process.argv.splice(2)[0] || '*'
-}
-
-function log () {
-  return null
-}
-
-function opts () {
-  var opts = fanboy.opts()
-  opts.media = 'podcast'
-  return opts
-}
-
-function start (er, db) {
-  assert(!er, er)
-  var search = fanboy.search(db, log(), opts())
-  search.write(term(), 'utf8')
-  search.pipe(process.stdout)
-  search.end()
-}
-
-function loc () {
-  return '/tmp/fanboy'
-}
-
-levelup(loc(), null, start)
-```
-
-### Example
-```
-node example/search_podcasts.js mule | json -a title
-```
-
-## API
+## types
 
 ### log()
-- `log` [bunyan()](https://github.com/trentm/node-bunyan)
+- [bunyan()](https://github.com/trentm/node-bunyan)
 
 ### db()
-- `db` [levelup()](https://github.com/rvagg/node-levelup)
+- [levelup()](https://github.com/rvagg/node-levelup)
 
-### opts()
-- `db` db()
-- `log` log() 
+## exports
+
+### opts(country, db, hostname, log, media, method, path, port, reduce, term, ttl)
+- country country || 'us'
+- db db()
+- hostname hostname || 'itunes.apple.com'
+- log log()
+- media = media || 'all'
+- method method || 'GET'
+- path path || '/search'
+- port port || 443
+- reduce reduce || function
+- term term || '*'
+- ttl ttl || 72 * 3600000
 
 ### search(opts())
 
-### terms(db())
-
-### lookup(db())
+### lookup(opts())
 
 ## License
 

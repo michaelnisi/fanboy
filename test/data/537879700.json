@@ -1,0 +1,44 @@
+{
+  "resultCount": 1,
+  "results": [
+    {
+      "wrapperType": "track",
+      "kind": "podcast",
+      "collectionId": 537879700,
+      "trackId": 537879700,
+      "artistName": "Tim Pritlove",
+      "collectionName": "Seminargespräche",
+      "trackName": "Seminargespräche",
+      "collectionCensoredName": "Seminargespräche",
+      "trackCensoredName": "Seminargespräche",
+      "collectionViewUrl": "https://itunes.apple.com/de/podcast/seminargesprache/id537879700?mt=2&uo=4",
+      "feedUrl": "http://feeds.feedburner.com/forum-politische-bildung",
+      "trackViewUrl": "https://itunes.apple.com/de/podcast/seminargesprache/id537879700?mt=2&uo=4",
+      "artworkUrl30": "http://a4.mzstatic.com/us/r30/Podcasts6/v4/00/49/fc/0049fc95-1329-4643-ad93-3baf54d8a928/mza_2273418040917995716.30x30-50.jpg",
+      "artworkUrl60": "http://a1.mzstatic.com/us/r30/Podcasts6/v4/00/49/fc/0049fc95-1329-4643-ad93-3baf54d8a928/mza_2273418040917995716.60x60-50.jpg",
+      "artworkUrl100": "http://a5.mzstatic.com/us/r30/Podcasts6/v4/00/49/fc/0049fc95-1329-4643-ad93-3baf54d8a928/mza_2273418040917995716.100x100-75.jpg",
+      "collectionPrice": 0,
+      "trackPrice": 0,
+      "trackRentalPrice": 0,
+      "collectionHdPrice": 0,
+      "trackHdPrice": 0,
+      "trackHdRentalPrice": 0,
+      "releaseDate": "2014-01-07T10:24:00Z",
+      "collectionExplicitness": "notExplicit",
+      "trackExplicitness": "notExplicit",
+      "trackCount": 15,
+      "country": "DEU",
+      "currency": "EUR",
+      "primaryGenreName": "Education",
+      "artworkUrl600": "http://a1.mzstatic.com/us/r30/Podcasts6/v4/00/49/fc/0049fc95-1329-4643-ad93-3baf54d8a928/mza_2273418040917995716.600x600-75.jpg",
+      "genreIds": [
+        "1304",
+        "26"
+      ],
+      "genres": [
+        "Bildung",
+        "Podcasts"
+      ]
+    }
+  ]
+}

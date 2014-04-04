@@ -1,38 +1,20 @@
 
+// common - common test setup
+
 module.exports.setup = setup
 module.exports.teardown = teardown
 module.exports.db = db
-module.exports.dir = dir
-module.exports.loc = loc
+module.exports.opts = opts
 
 var fs = require('fs')
   , levelup = require('levelup')
   , rimraf = require('rimraf')
   , path = require('path')
 
-function setup (t) {
-  t.plan(4)
-  t.ok(process.env.NODE_TEST, 'should be defined')
-  fs.mkdirSync(dir(), 0700)
-  t.ok(fs.statSync(dir()).isDirectory(), 'should exist')
-  levelup(loc(), null, function (er, db) {
-    t.ok(!er, 'should not error')
-    t.ok(db.isOpen(), 'should be open')
-    _db = db
-    t.end()
-  })
-}
-
-function teardown (t) {
-  t.plan(2)
-  db().close()
-  t.ok(db().isClosed(), 'should be closed')
-  rimraf(dir(), function (er) {
-    fs.stat(dir(), function (er) {
-      t.ok(!!er, 'should be removed')
-      t.end()
-    })
-  })
+var _loc
+function loc () {
+  if (!_loc) _loc = '/tmp/fanboy-' + Math.floor(Math.random() * (1<<24))
+  return _loc
 }
 
 var _db
@@ -41,13 +23,29 @@ function db () {
   return _db
 }
 
-var _dir
-function dir () {
-  if (!_dir) _dir = '/tmp/fanboy-' + Math.floor(Math.random() * (1<<24))
-  return _dir
+function opts () {
+  var opts = Object.create(null)
+  opts.media = 'podcast'
+  opts.db = db()
+  opts.hostname = 'localhost'
+  opts.port = 9999
+  return opts
 }
 
-function loc () {
-  return path.join(dir(), 'test.db')
+function setup (t) {
+  t.plan(1)
+  t.ok(process.env.NODE_TEST, 'should be defined')
+  t.end()
 }
 
+function teardown (t) {
+  t.plan(2)
+  db().close()
+  t.ok(db().isClosed(), 'should be closed')
+  rimraf(loc(), function (er) {
+    fs.stat(loc(), function (er) {
+      t.ok(!!er, 'should be removed')
+      t.end()
+    })
+  })
+}
