@@ -21,14 +21,9 @@ function search () {
   return fanboy.search(opts())
 }
 
-function clear () {
-  return fanboy.clear(opts())
-}
-
 var context = {
   lookup: lookup
 , search: search
-, clear: clear
 }
 
 var desc = Object.getOwnPropertyNames(context).map(function (n) {

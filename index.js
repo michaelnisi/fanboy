@@ -120,12 +120,9 @@ function put (db, term, results, cb) {
   }
 }
 
+var verbs = { '/search':'term', '/lookup':'id' }
 function decorate (obj, path, term) {
-  if (path === '/search') {
-    obj.term = term
-  } else if (path === '/lookup') {
-    obj.id = term
-  }
+  obj[verbs[path]] = term
   return obj
 }
 

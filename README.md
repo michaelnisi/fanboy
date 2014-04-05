@@ -8,10 +8,10 @@ The fanboy [Node.js](http://nodejs.org/) module implements cached search of the 
 ## types
 
 ### log()
-- [bunyan()](https://github.com/trentm/node-bunyan)
+Optional JSON logging with [bunyan](https://github.com/trentm/node-bunyan).
 
 ### db()
-- [levelup()](https://github.com/rvagg/node-levelup)
+The [levelup](https://github.com/rvagg/node-levelup) LevelDB wrapper.
 
 ## exports
 
@@ -22,7 +22,7 @@ The options for the fanboy store.
 - db db()
 - hostname String() | 'itunes.apple.com'
 - log log()
-- media = String() | 'all'
+- media String() | 'all'
 - method String() | 'GET'
 - path String() | '/search'
 - port Number() | 443
