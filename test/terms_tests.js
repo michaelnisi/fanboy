@@ -4,6 +4,7 @@ var test = require('tap').test
   , fanboy = require('../')
   , keys = require('../lib/keys')
   , string_decoder = require('string_decoder')
+  ;
 
 test('setup', function (t) {
   common.setup(t)
@@ -37,6 +38,7 @@ function decode (buf) {
 test('terms', function (t) {
   var db = common.db()
     , found = []
+    ;
   db.batch(puts(), function (er) {
     t.ok(!er)
     var terms = fanboy.terms({ db:db })
@@ -52,9 +54,9 @@ test('terms', function (t) {
     terms.write('abcd')
     terms.once('finish', function () {
       var wanted = [
-        'fnb\x00trm\x00abc\n'
-      , 'fnb\x00trm\x00abc\n'
-      , 'fnb\x00trm\x00abc\n'
+        'abc'
+      , 'abc'
+      , 'abc'
       ]
       t.deepEqual(found, wanted)
       t.end()

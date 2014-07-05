@@ -3,12 +3,12 @@ var common = require('./common')
   , fanboy = require('../')
   , fs = require('fs')
   , http = require('http')
-  , levelup = require('levelup')
   , path = require('path')
   , querystring = require('querystring')
   , router = require('routes')
   , test = require('tap').test
   , url = require('url')
+  ;
 
 function lookup (req, res) {
   var p = path.join('./data', req.query.id) + '.json'
@@ -21,15 +21,10 @@ function decorate (req) {
   return req
 }
 
-var _routes
-function routes () {
-  if (!_routes) _routes = router()
-  return _routes
-}
-
 function route (req, res) {
   var rt = routes().match(req.url)
     , fn = rt ? rt.fn : null
+    ;
   if (fn) {
     fn(decorate(req), res)
   } else {
@@ -46,9 +41,17 @@ function server () {
   return _server
 }
 
+var _routes
+function routes () {
+  if (!_routes) _routes = router()
+  return _routes
+}
+
+
 test('setup', function (t) {
   routes().addRoute('/lookup*', lookup)
   server()
+  console.error('XXX')
   common.setup(t)
 })
 
@@ -58,9 +61,9 @@ function opts () {
 
 test('simple', function (t) {
   var f = fanboy.lookup(opts())
-  var buf = ''
   f.write('537879700')
   f.end()
+  var buf = ''
   f.on('readable', function () {
     var chunk
     while (null !== (chunk = f.read())) {
@@ -90,17 +93,17 @@ test('simple', function (t) {
 
 test('ENOTJSON', function (t) {
   var f = fanboy.lookup(opts())
-  , errors = []
   f.path = '/hello'
+  var errors = []
   f.on('error', function (er) {
     errors.push(er)
   })
-t.plan(1)
+  t.plan(1)
   f.on('finish', function () {
     t.is(errors.length, 1)
     t.end()
   })
-f.write('123')
+  f.write('123')
 })
 
 test('ENOTFOUND', function (t) {

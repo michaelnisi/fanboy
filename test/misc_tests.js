@@ -1,6 +1,7 @@
 
 var test = require('tap').test
   , fanboy = require('../')
+  ;
 
 test('resOp', function (t) {
   var f = fanboy.resOp

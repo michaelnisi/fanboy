@@ -10,6 +10,7 @@ var fs = require('fs')
   , levelup = require('levelup')
   , rimraf = require('rimraf')
   , path = require('path')
+  ;
 
 var _loc
 function loc () {

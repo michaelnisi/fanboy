@@ -3,14 +3,10 @@
 
 module.exports.lookup = Lookup
 module.exports.search = Search
-module.exports.terms = SearchTerms
+module.exports.suggest = SearchTerms
 
-if (process.env.NODE_TEST) {
-  module.exports.base = Fanboy
-  module.exports.putOps = putOps
-  module.exports.termOp = termOp
-  module.exports.resOp = resOp
-}
+// TODO: Remove
+module.exports.terms = SearchTerms
 
 var assert = require('assert')
   , https = require('https')
@@ -22,6 +18,7 @@ var assert = require('assert')
   , stream = require('stream')
   , string_decoder = require('string_decoder')
   , util = require('util')
+  ;
 
 var debug
 if (process.env.NODE_DEBUG || process.env.NODE_TEST) {
@@ -40,6 +37,7 @@ function defaults (opts) {
   opts.method = opts.method || 'GET'
   opts.path = opts.path || '/search'
   opts.port = opts.port || 443
+  opts.readableObjectMode = opts.readableObjectMode || false
   opts.reduce = opts.reduce || reduce
   opts.term = opts.term || '*'
   opts.ttl = opts.ttl || 72 * 3600000
@@ -48,31 +46,54 @@ function defaults (opts) {
 
 util.inherits(Fanboy, stream.Transform)
 function Fanboy (opts) {
+  opts = defaults(opts)
   if (!(this instanceof Fanboy)) return new Fanboy(opts)
-  stream.Transform.call(this)
-  util._extend(this, defaults(opts))
+  stream.Transform.call(this, opts)
+  util._extend(this, opts)
+  this._readableState.objectMode = opts.readableObjectMode
+  this.decoder = new string_decoder.StringDecoder()
   this.state = 0
+}
+
+Fanboy.prototype.destroy = function () {
+  for (var key in this) delete this[key]
+}
+
+Fanboy.prototype.decode = function (chunk) {
+  return this.decoder.write(chunk)
 }
 
 var tokens = ['[', ',', ']\n']
 Fanboy.prototype.pushJSON = function (chunk) {
-  this.push(tokens[this.state] + chunk)
-  this.state = 1
+  if (this._readableState.objectMode) {
+    var obj = null
+    try {
+      obj = JSON.parse(chunk)
+    } catch (er) {
+      return this.error(er)
+    }
+    if (obj !== null) this.push(obj)
+  } else {
+    this.push(tokens[this.state] + chunk)
+    this.state = 1
+  }
 }
 
 Fanboy.prototype._flush = function () {
-  if (this.state) this.push(tokens[2])
-  this.state = 0
+  if (!this._readableState.objectMode) {
+    if (this.state) this.push(tokens[2])
+    this.state = 0
+  }
 }
 
-function release (emitters) {
+function removeAllListeners (emitters) {
   emitters.forEach(function (emitter) {
     emitter.removeAllListeners()
   })
 }
 
 // Bulk-write operation
-function BWOp (type, key, value) {
+function Bulk (type, key, value) {
   this.type = type
   this.key = key
   this.value = value
@@ -86,7 +107,8 @@ function termOp (term, keys, now) {
   now = now || Date.now()
   var key = termKey(term)
     , val = JSON.stringify([now].concat(keys))
-  return new BWOp('put', key, val)
+    ;
+  return new Bulk('put', key, val)
 }
 
 function resOp (result, now) {
@@ -94,13 +116,15 @@ function resOp (result, now) {
   result.ts = now
   var key = resKey(result.guid)
     , val = JSON.stringify(result)
-  return new BWOp('put', key, val)
+    ;
+  return new Bulk('put', key, val)
 }
 
 function putOps (term, results, now) {
   var op
     , ops = []
     , keys = []
+    ;
   results.forEach(function (result) {
     op = resOp(result, now)
     ops.push(op)
@@ -145,11 +169,12 @@ function ReqOpts (hostname, port, method, path) {
 // HTTPS request options
 // - term The search term
 Fanboy.prototype.reqOpts = function (term) {
+  term = term || this.term
   return new ReqOpts(
     this.hostname
   , this.port
   , this.method
-  , mkpath(this.path, term || this.term, this.media, this.country)
+  , mkpath(this.path, term, this.media, this.country)
   )
 }
 
@@ -160,10 +185,10 @@ Fanboy.prototype.request = function (term, cb) {
     , me = this
     , reduce = this.reduce
     , db = this.db
-    , results = [] // Collect for batch-write
+    , results = []
     , bolted = false
     , httpModule = opts.port === 443 ? https : http
-
+    ;
   function bolt (er) {
     me.error(er)
     if (bolted) return
@@ -171,7 +196,6 @@ Fanboy.prototype.request = function (term, cb) {
     me.end()
     bolted = true
   }
-
   var req = httpModule.request(opts, function (res) {
     var parser = JSONStream.parse('results.*')
     parser.on('data', function (obj) {
@@ -184,13 +208,19 @@ Fanboy.prototype.request = function (term, cb) {
 
     res.on('error', bolt)
     res.once('end', function (chunk) {
-      put(db, term, results, function (er) {
-        if (er) me.error(er)
-        results = null
-      })
-      cb()
-      me.end() // TODO: Do we explicitly need to end?
-      release([req, res, parser])
+      function done (er) {
+        cb(er)
+        removeAllListeners([req, res, parser])
+      }
+      if (!!results.length) {
+        put(db, term, results, function (er) {
+          if (er) me.error(er)
+          results = null
+          done(er)
+        })
+      } else {
+        done()
+      }
     })
     res.pipe(parser)
   })
@@ -199,12 +229,14 @@ Fanboy.prototype.request = function (term, cb) {
 }
 
 Fanboy.prototype.toString = function () {
-  return ['fanboy', this.constructor.name].join(': ')
+  return 'fanboy: ' + this.constructor.name
 }
 
-Fanboy.prototype.error = function (x) {
-  if (this.log) this.log.error(x)
-  debug(x)
+Fanboy.prototype.error = function (er) {
+  if (!er.notFound) {
+    if (this.log) this.log.error(er)
+    debug(er)
+  }
 }
 
 Fanboy.prototype.info = function (x) {
@@ -236,18 +268,12 @@ function resultForID (db, id, cb) {
   })
 }
 
-// Decode utf8 binary to string
-// - buf utf8 encoded binary
-var decoder = new string_decoder.StringDecoder()
-function decode (buf) {
-  return decoder.write(buf)
-}
-
-// - chunk iTunes ID (e.g., 537879700)
+// - chunk iTunes ID (e.g. '537879700')
 Lookup.prototype._transform = function (chunk, enc, cb) {
   var me = this
     , db = this.db
-    , id = decode(chunk)
+    , id = this.decode(chunk)
+    ;
   resultForID(db, id, function (er, value) {
     if (er && !er.notFound) me.error(er)
     if (value) {
@@ -273,7 +299,7 @@ Search.prototype.keysForTerm = function (term, cb) {
   var db = this.db
     , ttl = this.ttl
     , me = this
-
+    ;
   db.get(termKey(term), function (er, value) {
     var keys
     if (value) {
@@ -291,9 +317,9 @@ Search.prototype.keysForTerm = function (term, cb) {
 Search.prototype.resultsForKeys = function (keys, cb) {
   var me = this
     , db = this.db
-
-  ;(function get (keys) {
-    if (!keys.length) return cb
+    ;
+  (function get (keys) {
+    if (!keys.length) return cb()
     db.get(keys.shift(), function (er, val) {
       if (!er && val) me.pushJSON(val)
       get(keys)
@@ -302,13 +328,12 @@ Search.prototype.resultsForKeys = function (keys, cb) {
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
-  var term = decode(chunk)
+  var term = this.decode(chunk)
     , me = this
-    , db = this.db
-
-  keysForTerm(db, term, function (er, keys) {
-    if (er && !er.notFound) me.error(er)
-    keys ? me.resultsForKeys(keys, cb) : me.request(term, cb)
+    ;
+  this.keysForTerm(term, function (er, keys) {
+    if (!!er) me.error(er)
+    !er && !!keys ? me.resultsForKeys(keys, cb) : me.request(term, cb)
   })
 }
 
@@ -324,13 +349,14 @@ function keyStream (db, term) {
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
-  var me = this
-  var stream = keyStream(this.db, chunk)
-  .on('readable', function () {
+  var term = this.decode(chunk).toLowerCase()
+    , me = this
+    , stream = keyStream(this.db, term)
+    ;
+  stream.on('readable', function () {
     var key
     while (null !== (key = stream.read())) {
-      // TODO: Format
-      me.push(key += '\n')
+      me.push(key.split(keys.DIV)[2])
     }
   }).on('error', function (er) {
     cb(er)
@@ -338,5 +364,14 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     stream.removeAllListeners()
     cb()
   })
+}
+
+if (process.env.NODE_TEST) {
+  module.exports.base = Fanboy
+  module.exports.defaults = defaults
+  module.exports.putOps = putOps
+  module.exports.reduce = reduce
+  module.exports.resOp = resOp
+  module.exports.termOp = termOp
 }
 

@@ -1,15 +1,18 @@
+#!/usr/bin/env node
 
 // repl - dev repl
 
 var levelup = require('levelup')
   , db = levelup('/tmp/fanboy')
   , fanboy = require('./')
-  , repl = require("repl")
+  , repl = require('repl')
+  ;
 
 function opts () {
   var opts = Object.create(null)
   opts.media = 'podcast'
   opts.db = db
+  opts.readableObjectMode = true
   return opts
 }
 
@@ -21,9 +24,14 @@ function search () {
   return fanboy.search(opts())
 }
 
+function suggest () {
+  return fanboy.suggest(opts())
+}
+
 var context = {
   lookup: lookup
 , search: search
+, suggest: suggest
 }
 
 var desc = Object.getOwnPropertyNames(context).map(function (n) {

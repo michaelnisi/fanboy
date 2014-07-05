@@ -1,6 +1,29 @@
 
 var test = require('tap').test
   , fanboy = require('../')
+  ;
+
+test('defaults', function (t) {
+  var f = fanboy.defaults
+  t.plan(2)
+  t.ok(!!f())
+  var wanted = {
+    country: 'us'
+  , db: undefined
+  , hostname: 'itunes.apple.com'
+  , log: undefined
+  , media: 'all'
+  , method: 'GET'
+  , path: '/search'
+  , port: 443
+  , readableObjectMode: false
+  , reduce: fanboy.reduce
+  , term: '*'
+  , ttl: 259200000
+  }
+  t.deepEquals(f(), wanted)
+  t.end()
+})
 
 test('Lookup', function (t) {
   t.plan(9)
