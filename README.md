@@ -15,8 +15,6 @@ A [bunyan](https://github.com/trentm/node-bunyan) instance for integrated error 
 
 A [levelup](https://github.com/rvagg/node-levelup) instance.
 
-## exports
-
 ### opts()
 
 The options for the fanboy store.
@@ -35,6 +33,8 @@ The options for the fanboy store.
 - term String() | '*'
 - ttl Number() | 72 * 3600000
 ```
+
+## exports
 
 ### search(opts())
 
