@@ -32,21 +32,21 @@ The options for the fanboy store.
 - port Number() | 443
 - readableObjectMode Boolean() | false
 - reduce function | './lib/reduce'
-- term String() | '*'
+- term String() | '*'
 - ttl Number() | 72 * 3600000
 ```
 
 ### search(opts())
 
-Duplex stream where the input is search terms as String or Buffer and the output is search results in JSON.
+Duplex stream where input is search terms as `String` or `Buffer` and output is search results in JSON.
 
 ### lookup(opts())
 
-Duplex stream where the input is guids as Number? and the output is search results (iTunes store items?) in JSON.
+Duplex stream where input is guids as `String` or `Buffer` and the output is search results in JSON.
 
-### suggest(opts())
+## Installation
 
-Duplex stream where the input is search terms and the output is suggested search terms as Strings. 
+[![NPM](https://nodei.co/npm/fanboy.svg)](https://npmjs.org/package/fanboy)
 
 ## License
 
