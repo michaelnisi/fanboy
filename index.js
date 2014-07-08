@@ -86,12 +86,6 @@ Fanboy.prototype._flush = function () {
   }
 }
 
-function removeAllListeners (emitters) {
-  emitters.forEach(function (emitter) {
-    emitter.removeAllListeners()
-  })
-}
-
 // Bulk-write operation
 function Bulk (type, key, value) {
   this.type = type
@@ -104,7 +98,7 @@ function termKey (term) {
 }
 
 function termOp (term, keys, now) {
-  now = now || Date.now()
+  now = now || Date.now()
   var key = termKey(term)
     , val = JSON.stringify([now].concat(keys))
     ;
@@ -339,7 +333,7 @@ Search.prototype.resultsForKeys = function (keys, cb) {
         if (me.use(val)) {
           get(keys)
         } else {
-          cb(new Error('wait'))
+          cb(new Error('wait!'))
         }
       }
     })
@@ -385,7 +379,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
       while (null !== (key = stream.read())) {
         term = key.split(keys.DIV)[2]
         if (!me.use('"' + term + '"')) {
-          stream.once('drain', go)
+          me.once('drain', go)
           break
         }
       }
