@@ -35,33 +35,34 @@ function decode (buf) {
   return decoder.write(buf)
 }
 
-test('terms', function (t) {
+test('suggest', function (t) {
   var db = common.db()
     , found = []
     ;
   db.batch(puts(), function (er) {
     t.ok(!er)
-    var terms = fanboy.terms({ db:db })
-    terms.on('readable', function () {
+    var f = fanboy.suggest({ db:db })
+    f.on('readable', function () {
       var chunk
-      while (null !== (chunk = terms.read())) {
+      while (null !== (chunk = f.read())) {
         found.push(decode(chunk))
       }
     })
-    terms.write('a')
-    terms.write('ab')
-    terms.write('abc')
-    terms.write('abcd')
-    terms.once('finish', function () {
+    f.write('a')
+    f.write('ab')
+    f.write('abc')
+    f.write('abcd')
+    f.once('finish', function () {
       var wanted = [
-        'abc'
-      , 'abc'
-      , 'abc'
+        '["abc"'
+      , ',"abc"'
+      , ',"abc"'
+      , ']\n'
       ]
       t.deepEqual(found, wanted)
       t.end()
     })
-    terms.end()
+    f.end()
   })
 })
 

@@ -47,11 +47,9 @@ function routes () {
   return _routes
 }
 
-
 test('setup', function (t) {
   routes().addRoute('/lookup*', lookup)
   server()
-  console.error('XXX')
   common.setup(t)
 })
 
@@ -94,13 +92,8 @@ test('simple', function (t) {
 test('ENOTJSON', function (t) {
   var f = fanboy.lookup(opts())
   f.path = '/hello'
-  var errors = []
   f.on('error', function (er) {
-    errors.push(er)
-  })
-  t.plan(1)
-  f.on('finish', function () {
-    t.is(errors.length, 1)
+    t.is(er.message, 'Unexpected "o" at position 1 in state NULL1')
     t.end()
   })
   f.write('123')

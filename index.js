@@ -5,10 +5,8 @@ module.exports.lookup = Lookup
 module.exports.search = Search
 module.exports.suggest = SearchTerms
 
-// TODO: Remove
-module.exports.terms = SearchTerms
-
 var assert = require('assert')
+  , events = require('events')
   , https = require('https')
   , http = require('http')
   , JSONStream = require('JSONStream')
@@ -64,18 +62,20 @@ Fanboy.prototype.decode = function (chunk) {
 }
 
 var tokens = ['[', ',', ']\n']
-Fanboy.prototype.pushJSON = function (chunk) {
+Fanboy.prototype.use = function (chunk) {
   if (this._readableState.objectMode) {
     var obj = null
     try {
       obj = JSON.parse(chunk)
     } catch (er) {
-      return this.error(er)
+      this.error(er)
+      return true
     }
-    if (obj !== null) this.push(obj)
+    return obj !== null ? this.push(obj) : true
   } else {
-    this.push(tokens[this.state] + chunk)
+    var more = this.push(tokens[this.state] + chunk)
     this.state = 1
+    return more
   }
 }
 
@@ -140,7 +140,7 @@ function put (db, term, results, cb) {
       cb(er)
     })
   } else {
-    cb(null)
+    cb()
   }
 }
 
@@ -178,53 +178,62 @@ Fanboy.prototype.reqOpts = function (term) {
   )
 }
 
+function listenerCount (emt, ev) {
+  return events.EventEmitter.listenerCount(emt, ev)
+}
+
 // Request lookup or search for term
 // - term iTunes ID or search term
 Fanboy.prototype.request = function (term, cb) {
   var opts = this.reqOpts(term)
     , me = this
-    , reduce = this.reduce
-    , db = this.db
-    , results = []
-    , bolted = false
     , httpModule = opts.port === 443 ? https : http
     ;
-  function bolt (er) {
-    me.error(er)
-    if (bolted) return
-    me.emit('error', er)
-    me.end()
-    bolted = true
-  }
   var req = httpModule.request(opts, function (res) {
     var parser = JSONStream.parse('results.*')
-    parser.on('data', function (obj) {
-      assert(obj)
+      , results = []
+      , reduce = me.reduce
+      , parserError
+      ;
+    function parserData (obj) {
       var result = reduce(obj)
       results.push(result)
-      me.pushJSON(JSON.stringify(result))
+      me.use(JSON.stringify(result))
+    }
+    parser.on('data', parserData)
+    parser.on('error', function (er) {
+      if (listenerCount(parser, 'data')) {
+        parser.removeListener('data', parserData)
+        parser.end()
+        me.error(er)
+        parserError = er
+      }
     })
-    parser.on('error', bolt)
 
-    res.on('error', bolt)
+    var db = me.db
     res.once('end', function (chunk) {
       function done (er) {
+        parser.removeAllListeners()
+        res.removeAllListeners()
         cb(er)
-        removeAllListeners([req, res, parser])
       }
-      if (!!results.length) {
+      if (results.length) {
         put(db, term, results, function (er) {
           if (er) me.error(er)
           results = null
           done(er)
         })
       } else {
-        done()
+        done(parserError)
       }
     })
     res.pipe(parser)
   })
-  req.on('error', bolt)
+
+  req.on('error', function (er) {
+    me.error(er)
+    cb(er)
+  })
   req.end()
 }
 
@@ -275,13 +284,17 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
     , id = this.decode(chunk)
     ;
   resultForID(db, id, function (er, value) {
-    if (er && !er.notFound) me.error(er)
-    if (value) {
-      me.pushJSON(value)
-      cb(er)
-    } else {
-      me.request(id, cb)
+    if (er) {
+      me.error(er)
+      if (er.notFound) {
+        return me.request(id, cb)
+      }
+    } else if (value !== undefined) {
+      if (!me.use(value)) {
+        er = new Error('wait!')
+      }
     }
+    cb(er)
   })
 }
 
@@ -314,6 +327,7 @@ Search.prototype.keysForTerm = function (term, cb) {
   })
 }
 
+// TODO: Why block?
 Search.prototype.resultsForKeys = function (keys, cb) {
   var me = this
     , db = this.db
@@ -321,8 +335,13 @@ Search.prototype.resultsForKeys = function (keys, cb) {
   (function get (keys) {
     if (!keys.length) return cb()
     db.get(keys.shift(), function (er, val) {
-      if (!er && val) me.pushJSON(val)
-      get(keys)
+      if (!er && val) {
+        if (me.use(val)) {
+          get(keys)
+        } else {
+          cb(new Error('wait'))
+        }
+      }
     })
   })(keys)
 }
@@ -332,8 +351,13 @@ Search.prototype._transform = function (chunk, enc, cb) {
     , me = this
     ;
   this.keysForTerm(term, function (er, keys) {
-    if (!!er) me.error(er)
-    !er && !!keys ? me.resultsForKeys(keys, cb) : me.request(term, cb)
+    if (er) {
+      me.error(er)
+      if (er.notFound) return me.request(term, cb)
+    } else if (keys !== undefined) {
+      return me.resultsForKeys(keys, cb)
+    }
+    cb(er || new Error('no error, no keys'))
   })
 }
 
@@ -355,9 +379,17 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     ;
   stream.on('readable', function () {
     var key
-    while (null !== (key = stream.read())) {
-      me.push(key.split(keys.DIV)[2])
-    }
+      , term
+      ;
+    (function go () {
+      while (null !== (key = stream.read())) {
+        term = key.split(keys.DIV)[2]
+        if (!me.use('"' + term + '"')) {
+          stream.once('drain', go)
+          break
+        }
+      }
+    })()
   }).on('error', function (er) {
     cb(er)
   }).once('end', function () {

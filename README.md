@@ -38,11 +38,15 @@ The options for the fanboy store.
 
 ### search(opts())
 
-Duplex stream where input is search terms as `String` or `Buffer` and output is search results in JSON.
+Duplex stream where input is search terms as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
 
 ### lookup(opts())
 
-Duplex stream where input is guids as `String` or `Buffer` and the output is search results in JSON.
+Duplex stream where input is guids as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
+
+### suggest(opts())
+
+Duplex stream where input is search terms as `String` or `Buffer` and output is search terms as JSON `Buffer` or `String`.
 
 ## Installation
 
