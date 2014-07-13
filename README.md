@@ -21,7 +21,7 @@ The options for the fanboy store.
 
 ```js
 - country String() | 'us'
-- db db() | undefined
+- db db() | undefined **(required)**
 - hostname String() | 'itunes.apple.com'
 - log log() | undefined
 - media String() | 'all'

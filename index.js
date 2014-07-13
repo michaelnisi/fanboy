@@ -1,9 +1,9 @@
 
 // fanboy - search itunes store
 
-module.exports.lookup = Lookup
-module.exports.search = Search
-module.exports.suggest = SearchTerms
+exports.lookup = Lookup
+exports.search = Search
+exports.suggest = SearchTerms
 
 var assert = require('assert')
   , events = require('events')
@@ -393,11 +393,10 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
 }
 
 if (process.env.NODE_TEST) {
-  module.exports.base = Fanboy
-  module.exports.defaults = defaults
-  module.exports.putOps = putOps
-  module.exports.reduce = reduce
-  module.exports.resOp = resOp
-  module.exports.termOp = termOp
+  exports.base = Fanboy
+  exports.defaults = defaults
+  exports.putOps = putOps
+  exports.reduce = reduce
+  exports.resOp = resOp
+  exports.termOp = termOp
 }
-
