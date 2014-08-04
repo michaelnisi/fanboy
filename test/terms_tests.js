@@ -30,9 +30,9 @@ function puts () {
   return puts
 }
 
-var decoder = new string_decoder.StringDecoder('utf8')
+var _decoder = new string_decoder.StringDecoder('utf8')
 function decode (buf) {
-  return decoder.write(buf)
+  return _decoder.write(buf)
 }
 
 test('suggest', function (t) {

@@ -1,68 +1,54 @@
 
 var common = require('./common')
   , fanboy = require('../')
-  , fs = require('fs')
-  , http = require('http')
-  , path = require('path')
-  , querystring = require('querystring')
-  , router = require('routes')
   , test = require('tap').test
-  , url = require('url')
   ;
-
-function search (req, res) {
-  var q = req.query
-  if (q.term === 'gruber') {
-    var p = path.join('./data', 'gruber.json')
-    fs.createReadStream(p).pipe(res)
-  } else {
-    res.writeHead(404)
-    res.end('not found\n')
-  }
-}
-
-function decorate (req) {
-  var query = url.parse(req.url).query
-  req.query = querystring.parse(query)
-  return req
-}
-
-function route (req, res) {
-  var rt = routes().match(req.url)
-    , fn = rt ? rt.fn : null
-    ;
-  if (fn) {
-    fn(decorate(req), res)
-  } else {
-    res.writeHead(404)
-    res.end('not found\n')
-  }
-}
 
 var _server
 function server () {
-  if (!_server) {
-    _server = http.createServer(route).listen(opts().port)
-  }
-  return _server
+  return _server || (_server = common.server())
 }
-
-var _routes
-function routes () {
-  if (!_routes) _routes = router()
-  return _routes
-}
-
 
 test('setup', function (t) {
-  routes().addRoute('/search*', search)
-  server()
   common.setup(t)
+  server()
 })
 
-function opts () {
-  return common.opts()
+function opts (o) {
+  return common.opts(o)
 }
+
+test('lie', function (t) {
+  common.test(t, fanboy.search(opts()))
+})
+
+test('surprise', function (t) {
+  common.test(t, fanboy.search(opts()))
+})
+
+test('ENOTJSON', function (t) {
+  common.test(t, fanboy.search(opts()))
+})
+
+test('ENOTFOUND', function (t) {
+  common.test(t, fanboy.search(opts({hostname:'nasty'})))
+})
+
+test('ECONNREFUSED', function (t) {
+  common.test(t, fanboy.search(opts({port:9998})))
+})
+
+test('uninterrupted', function (t) {
+  common.test(t, fanboy.search(opts()))
+})
+
+test('interrupted', function (t) {
+  common.test(t, fanboy.search(opts()))
+})
+
+test('stutter', function (t) {
+  common.test(t, fanboy.search(opts()))
+})
 
 test('simple', function (t) {
   var f = fanboy.search(opts())

@@ -3,17 +3,19 @@
 // repl - dev repl
 
 var levelup = require('levelup')
-  , db = levelup('/tmp/fanboy')
   , fanboy = require('./')
   , repl = require('repl')
   ;
 
+var _opts
 function opts () {
-  var opts = Object.create(null)
-  opts.media = 'podcast'
-  opts.db = db
-  opts.readableObjectMode = true
-  return opts
+  if (!_opts) {
+    _opts = Object.create(null)
+    _opts.media = 'podcast'
+    _opts.db = levelup('/tmp/fanboy')
+    _opts.readableObjectMode = true
+  }
+  return _opts
 }
 
 function lookup () {

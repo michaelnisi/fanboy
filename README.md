@@ -1,29 +1,24 @@
 
 # fanboy - search iTunes store
 
-The fanboy [Node.js](http://nodejs.org/) module implements cached search of the iTunes store. 
+The Fanboy [Node.js](http://nodejs.org/) module implements cached search of the iTunes store. 
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy) [![David DM](https://david-dm.org/michaelnisi/fanboy.svg)](http://david-dm.org/michaelnisi/fanboy)
 
 ## types
 
-### log()
-
-A [bunyan](https://github.com/trentm/node-bunyan) instance for integrated error logging.
-
 ### db()
 
-A [levelup](https://github.com/rvagg/node-levelup) instance.
+The mandatory [levelup](https://github.com/rvagg/node-levelup) instance.
 
 ### opts()
 
-The options for the fanboy store.
+The options for the Fanboy store.
 
 ```js
 - country String() | 'us'
-- db db() | undefined **(required)**
+- db db() | undefined 
 - hostname String() | 'itunes.apple.com'
-- log log() | undefined
 - media String() | 'all'
 - method String() | 'GET'
 - path String() | '/search'
@@ -35,6 +30,8 @@ The options for the fanboy store.
 ```
 
 ## exports
+
+Fanboy has a stateless API exporting three functions.
 
 ### search(opts())
 

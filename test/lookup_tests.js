@@ -1,61 +1,54 @@
 
 var common = require('./common')
   , fanboy = require('../')
-  , fs = require('fs')
-  , http = require('http')
-  , path = require('path')
-  , querystring = require('querystring')
-  , router = require('routes')
   , test = require('tap').test
-  , url = require('url')
   ;
-
-function lookup (req, res) {
-  var p = path.join('./data', req.query.id) + '.json'
-  fs.createReadStream(p).pipe(res)
-}
-
-function decorate (req) {
-  var query = url.parse(req.url).query
-  req.query = querystring.parse(query)
-  return req
-}
-
-function route (req, res) {
-  var rt = routes().match(req.url)
-    , fn = rt ? rt.fn : null
-    ;
-  if (fn) {
-    fn(decorate(req), res)
-  } else {
-    res.writeHead(404)
-    res.end('not found\n')
-  }
-}
 
 var _server
 function server () {
-  if (!_server) {
-    _server = http.createServer(route).listen(opts().port)
-  }
-  return _server
-}
-
-var _routes
-function routes () {
-  if (!_routes) _routes = router()
-  return _routes
+  return _server || (_server = common.server())
 }
 
 test('setup', function (t) {
-  routes().addRoute('/lookup*', lookup)
-  server()
   common.setup(t)
+  server()
 })
 
 function opts () {
   return common.opts()
 }
+
+test('lie', function (t) {
+  common.test(t, fanboy.lookup(opts()))
+})
+
+test('surprise', function (t) {
+  common.test(t, fanboy.lookup(opts()))
+})
+
+test('ENOTJSON', function (t) {
+  common.test(t, fanboy.lookup(opts()))
+})
+
+test('ENOTFOUND', function (t) {
+  common.test(t, fanboy.lookup(opts({ hostname:'nasty'})))
+})
+
+test('ECONNREFUSED', function (t) {
+  common.test(t, fanboy.lookup(opts({port:9998})))
+})
+
+test('uninterrupted', function (t) {
+  common.test(t, fanboy.lookup(opts()))
+})
+
+test('interrupted', function (t) {
+  common.test(t, fanboy.lookup(opts()))
+})
+
+test('stutter', function (t) {
+  common.test(t, fanboy.lookup(opts()))
+})
 
 test('simple', function (t) {
   var f = fanboy.lookup(opts())
@@ -85,40 +78,6 @@ test('simple', function (t) {
         updated: 1389090240000 }
     }
     t.deepEqual(found, wanted())
-    t.end()
-  })
-})
-
-test('ENOTJSON', function (t) {
-  var f = fanboy.lookup(opts())
-  f.path = '/hello'
-  f.on('error', function (er) {
-    t.is(er.message, 'Unexpected "o" at position 1 in state NULL1')
-    t.end()
-  })
-  f.write('123')
-})
-
-test('ENOTFOUND', function (t) {
-  var mopts = opts()
-  mopts.hostname = 'nasty'
-  var f = fanboy.lookup(mopts)
-  f.write('123', 'utf8')
-  t.plan(1)
-  f.on('error', function (er) {
-    t.ok(er, 'should error')
-    t.end()
-  })
-})
-
-test('ECONNREFUSED', function (t) {
-  var mopts = opts()
-  mopts.port = 9998
-  var f = fanboy.lookup(mopts)
-  f.write('123', 'utf8')
-  t.plan(1)
-  f.on('error', function (er) {
-    t.ok(er, 'should error')
     t.end()
   })
 })

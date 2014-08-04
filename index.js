@@ -18,19 +18,20 @@ var assert = require('assert')
   , util = require('util')
   ;
 
-var debug
-if (process.env.NODE_DEBUG || process.env.NODE_TEST) {
-  debug = function (o) { console.error('**fanboy: %s', util.inspect(o)) }
-} else {
-  debug = function () { }
-}
+function noop () {}
+
+var debug = function () {
+  return process.env.NODE_DEBUG ?
+    function (o) {
+      console.error('**fanboy: %s', util.inspect(o))
+    } : noop
+}()
 
 function defaults (opts) {
   opts = opts || Object.create(null)
   opts.country = opts.country || 'us'
   opts.db = opts.db
   opts.hostname = opts.hostname || 'itunes.apple.com'
-  opts.log = opts.log
   opts.media = opts.media || 'all'
   opts.method = opts.method || 'GET'
   opts.path = opts.path || '/search'
@@ -53,10 +54,6 @@ function Fanboy (opts) {
   this.state = 0
 }
 
-Fanboy.prototype.destroy = function () {
-  for (var key in this) delete this[key]
-}
-
 Fanboy.prototype.decode = function (chunk) {
   return this.decoder.write(chunk)
 }
@@ -68,7 +65,8 @@ Fanboy.prototype.use = function (chunk) {
     try {
       obj = JSON.parse(chunk)
     } catch (er) {
-      this.error(er)
+      er.warn = true
+      this.emit('error', er)
       return true
     }
     return obj !== null ? this.push(obj) : true
@@ -191,41 +189,49 @@ Fanboy.prototype.request = function (term, cb) {
       ;
     function parserData (obj) {
       var result = reduce(obj)
-      results.push(result)
-      me.use(JSON.stringify(result))
+      if (result) {
+        results.push(result)
+        me.use(JSON.stringify(result))
+      }
     }
     parser.on('data', parserData)
     parser.on('error', function (er) {
       if (listenerCount(parser, 'data')) {
         parser.removeListener('data', parserData)
         parser.end()
-        me.error(er)
         parserError = er
+      }
+    })
+    function done (er) {
+      parser.removeAllListeners()
+      res.removeAllListeners()
+      cb(er)
+    }
+    parser.once('root', function (root, count) {
+      if (!count) {
+        parserError = new Error('JSON contained no results')
+        req.abort()
       }
     })
 
     var db = me.db
     res.once('end', function (chunk) {
-      function done (er) {
-        parser.removeAllListeners()
-        res.removeAllListeners()
-        cb(er)
-      }
       if (results.length) {
         put(db, term, results, function (er) {
-          if (er) me.error(er)
           results = null
           done(er)
         })
       } else {
-        done(parserError)
+        done(parserError || function () {
+          var er = new Error('no results')
+          return er
+        }())
       }
     })
     res.pipe(parser)
   })
 
   req.on('error', function (er) {
-    me.error(er)
     cb(er)
   })
   req.end()
@@ -233,18 +239,6 @@ Fanboy.prototype.request = function (term, cb) {
 
 Fanboy.prototype.toString = function () {
   return 'fanboy: ' + this.constructor.name
-}
-
-Fanboy.prototype.error = function (er) {
-  if (!er.notFound) {
-    if (this.log) this.log.error(er)
-    debug(er)
-  }
-}
-
-Fanboy.prototype.info = function (x) {
-  if (this.log) this.log.info(x)
-  debug(x)
 }
 
 // Lookup item in store
@@ -279,7 +273,6 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
     ;
   resultForID(db, id, function (er, value) {
     if (er) {
-      me.error(er)
       if (er.notFound) {
         return me.request(id, cb)
       }
@@ -314,7 +307,8 @@ Search.prototype.keysForTerm = function (term, cb) {
         keys = JSON.parse(value)
         if (stale(keys.shift(), ttl)) keys = null
       } catch (er) {
-        me.error(er)
+        er.warn = true
+        me.emit('error', er)
       }
     }
     cb(er, keys)
@@ -346,7 +340,6 @@ Search.prototype._transform = function (chunk, enc, cb) {
     ;
   this.keysForTerm(term, function (er, keys) {
     if (er) {
-      me.error(er)
       if (er.notFound) return me.request(term, cb)
     } else if (keys !== undefined) {
       return me.resultsForKeys(keys, cb)
@@ -384,9 +377,11 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
         }
       }
     })()
-  }).on('error', function (er) {
+  })
+  stream.on('error', function (er) {
     cb(er)
-  }).once('end', function () {
+  })
+  stream.once('end', function () {
     stream.removeAllListeners()
     cb()
   })
@@ -395,6 +390,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
 if (process.env.NODE_TEST) {
   exports.base = Fanboy
   exports.defaults = defaults
+  exports.noop = noop
   exports.putOps = putOps
   exports.reduce = reduce
   exports.resOp = resOp
