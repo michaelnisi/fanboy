@@ -10,6 +10,11 @@ test('resOp', function (t) {
   t.end()
 })
 
+test('debug', function (t) {
+  t.ok((fanboy.debug === fanboy.noop) === !process.env.DEBUG)
+  t.end()
+})
+
 test('termOp', function (t) {
   var keys = [
     'fnb\x00res\x0012'

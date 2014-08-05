@@ -222,10 +222,7 @@ Fanboy.prototype.request = function (term, cb) {
           done(er)
         })
       } else {
-        done(parserError || function () {
-          var er = new Error('no results')
-          return er
-        }())
+        done(parserError || new Error('no results'))
       }
     })
     res.pipe(parser)
@@ -390,6 +387,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
 if (process.env.NODE_TEST) {
   exports.base = Fanboy
   exports.defaults = defaults
+  exports.debug = debug
   exports.noop = noop
   exports.putOps = putOps
   exports.reduce = reduce
