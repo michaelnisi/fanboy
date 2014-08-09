@@ -54,6 +54,7 @@ test('simple', function (t) {
   var f = fanboy.search(opts())
   var buf = ''
   f.write('gruber')
+  f.write('gruber')
   f.end()
   f.on('readable', function () {
     var chunk
@@ -64,7 +65,7 @@ test('simple', function (t) {
   t.plan(1)
   f.on('finish', function () {
     var items = JSON.parse(buf)
-    t.is(items.length, 13)
+    t.is(items.length, 13 * 2)
     t.end()
   })
 })

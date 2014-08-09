@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "search iTunes store",
   "main": "index.js",
   "directories": {
@@ -24,6 +24,7 @@
   ],
   "dependencies": {
     "levelup": "0.18.x",
+    "level-random": "0.0.x",
     "JSONStream": "0.9.x"
   },
   "devDependencies": {

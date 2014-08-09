@@ -12,6 +12,7 @@ var assert = require('assert')
   , JSONStream = require('JSONStream')
   , keys = require('./lib/keys')
   , querystring = require('querystring')
+  , lr = require('level-random')
   , reduce = require('./lib/reduce')
   , stream = require('stream')
   , string_decoder = require('string_decoder')
@@ -288,6 +289,8 @@ function Search (opts) {
   Fanboy.call(this, opts)
 }
 
+// TODO: Something seems to be off with ttl. Investigate
+// Had disappearing terms
 function stale (time, ttl) {
   return Date.now() - time > ttl
 }
@@ -312,23 +315,27 @@ Search.prototype.keysForTerm = function (term, cb) {
   })
 }
 
-// TODO: Why block?
 Search.prototype.resultsForKeys = function (keys, cb) {
   var me = this
-    , db = this.db
+    , values = lr({ db:this.db })
     ;
-  (function get (keys) {
-    if (!keys.length) return cb()
-    db.get(keys.shift(), function (er, val) {
-      if (!er && val) {
-        if (me.use(val)) {
-          get(keys)
-        } else {
-          cb(new Error('wait!'))
-        }
-      }
-    })
-  })(keys)
+  values.on('error', cb)
+  values.on('finish', cb)
+  function useValues () {
+    var chunk
+    while (null !== (chunk = values.read())) {
+      if (!me.use(chunk)) return me.once('drain', useValues)
+    }
+  }
+  values.on('readable', useValues)
+  function writeKeys () {
+    var ok = true
+    do {
+      ok = values.write(keys.shift())
+    } while (ok && keys.length)
+    keys.length ? values.once('drain', writeKeys) : values.end()
+  }
+  writeKeys()
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
@@ -338,10 +345,10 @@ Search.prototype._transform = function (chunk, enc, cb) {
   this.keysForTerm(term, function (er, keys) {
     if (er) {
       if (er.notFound) return me.request(term, cb)
-    } else if (keys !== undefined) {
+    } else if (keys && keys.length) {
       return me.resultsForKeys(keys, cb)
     }
-    cb(er || new Error('no error, no keys'))
+    cb(new Error('no keys for ' + term))
   })
 }
 
