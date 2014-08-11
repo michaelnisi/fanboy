@@ -22,23 +22,32 @@ function opts () {
 
 ```js
 var search = fanboy.search(opts())
+search.end('merlin mann')
 search.pipe(process.stdout)
-search.write('merlin mann')
-search.end()
+```
+
+```
+$ node example/search.js | json
 ```
 
 ```js
 var lookup = fanboy.lookup(opts())
+lookup.end('471418144')
 lookup.pipe(process.stdout)
-lookup.write('471418144')
-lookup.end()
+```
+
+```
+$ node example/lookup.js | json
 ```
 
 ```js
 var suggest = fanboy.suggest(opts())
+suggest.end('mer')
 suggest.pipe(process.stdout)
-suggest.write('mer')
-suggest.end()
+```
+
+```
+$ node example/suggest.js | json
 ```
 
 ## types
@@ -71,15 +80,15 @@ Fanboy has a stateless API exporting three functions.
 
 ### search(opts())
 
-Duplex stream where input is search terms as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
+[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform)  stream where input is search terms as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
 ### lookup(opts())
 
-Duplex stream where input is guids as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
+[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is guids as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
 ### suggest(opts())
 
-Duplex stream where input is search terms as `String` or `Buffer` and output is search terms as JSON `Buffer` or `String`.
+[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is search terms as `String` or `Buffer` and output is search terms as `JSON` `Buffer` or `String`.
 
 ## Installation
 
