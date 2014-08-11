@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "0.2.3",
+  "version": "1.0.0",
   "description": "search iTunes store",
   "main": "index.js",
   "directories": {
