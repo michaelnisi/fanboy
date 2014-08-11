@@ -1,7 +1,7 @@
 
 # fanboy - search iTunes store
 
-The Fanboy [Node.js](http://nodejs.org/) module implements cached search of the iTunes store.
+The Fanboy [Node.js](http://nodejs.org/) module implements cached search in the iTunes store using the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy) [![David DM](https://david-dm.org/michaelnisi/fanboy.svg)](http://david-dm.org/michaelnisi/fanboy)
 
@@ -54,7 +54,7 @@ $ node example/suggest.js | json
 
 ### db()
 
-The mandatory [levelup](https://github.com/rvagg/node-levelup) instance.
+The mandatory [LevelUP](https://github.com/rvagg/node-levelup) instance.
 
 ### opts()
 
