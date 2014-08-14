@@ -38,12 +38,12 @@ test('Lookup', function (t) {
   t.end()
 })
 
-test('Fanboy', function (t) {
+test('FanboyTransform', function (t) {
   t.plan(14)
   var f = fanboy.base
   var obj = f()
   t.ok(obj instanceof f)
-  t.is(obj.toString(), 'fanboy: Fanboy')
+  t.is(obj.toString(), 'fanboy: FanboyTransform')
   t.is(obj.path, '/search')
   t.is(typeof obj.reqOpts, 'function')
   t.is(typeof obj.request, 'function')

@@ -70,6 +70,16 @@ test('simple', function (t) {
   })
 })
 
+test('no keys', function (t) {
+  t.plan(2)
+  var f = fanboy.search(opts())
+  f.keysForTerm('abc', function (er, keys) {
+    t.ok(er.notFound, 'should error not found')
+    t.is(keys, undefined)
+    t.end()
+  })
+})
+
 test('teardown', function (t) {
   server().close(function () {
     common.teardown(t)

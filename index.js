@@ -44,10 +44,10 @@ function defaults (opts) {
   return opts
 }
 
-util.inherits(Fanboy, stream.Transform)
-function Fanboy (opts) {
+util.inherits(FanboyTransform, stream.Transform)
+function FanboyTransform (opts) {
   opts = defaults(opts)
-  if (!(this instanceof Fanboy)) return new Fanboy(opts)
+  if (!(this instanceof FanboyTransform)) return new FanboyTransform(opts)
   stream.Transform.call(this, opts)
   util._extend(this, opts)
   this._readableState.objectMode = opts.readableObjectMode
@@ -55,12 +55,12 @@ function Fanboy (opts) {
   this.state = 0
 }
 
-Fanboy.prototype.decode = function (chunk) {
+FanboyTransform.prototype.decode = function (chunk) {
   return this.decoder.write(chunk)
 }
 
-var tokens = ['[', ',', ']\n']
-Fanboy.prototype.use = function (chunk) {
+var TOKENS = ['[', ',', ']\n']
+FanboyTransform.prototype.use = function (chunk) {
   if (this._readableState.objectMode) {
     var obj = null
     try {
@@ -72,15 +72,15 @@ Fanboy.prototype.use = function (chunk) {
     }
     return obj !== null ? this.push(obj) : true
   } else {
-    var more = this.push(tokens[this.state] + chunk)
+    var more = this.push(TOKENS[this.state] + chunk)
     this.state = 1
     return more
   }
 }
 
-Fanboy.prototype._flush = function () {
+FanboyTransform.prototype._flush = function () {
   if (!this._readableState.objectMode) {
-    if (this.state) this.push(tokens[2])
+    if (this.state) this.push(TOKENS[2])
     this.state = 0
   }
 }
@@ -161,7 +161,7 @@ function ReqOpts (hostname, port, method, path) {
 
 // HTTPS request options
 // - term The search term
-Fanboy.prototype.reqOpts = function (term) {
+FanboyTransform.prototype.reqOpts = function (term) {
   term = term || this.term
   return new ReqOpts(
     this.hostname
@@ -177,7 +177,7 @@ function listenerCount (emt, ev) {
 
 // Request lookup or search for term
 // - term iTunes ID or search term
-Fanboy.prototype.request = function (term, cb) {
+FanboyTransform.prototype.request = function (term, cb) {
   var opts = this.reqOpts(term)
     , me = this
     , httpModule = opts.port === 443 ? https : http
@@ -235,17 +235,17 @@ Fanboy.prototype.request = function (term, cb) {
   req.end()
 }
 
-Fanboy.prototype.toString = function () {
+FanboyTransform.prototype.toString = function () {
   return 'fanboy: ' + this.constructor.name
 }
 
 // Lookup item in store
-util.inherits(Lookup, Fanboy)
+util.inherits(Lookup, FanboyTransform)
 function Lookup (opts) {
   if (!(this instanceof Lookup)) return new Lookup(opts)
   opts = opts || Object.create(null)
   opts.path = '/lookup'
-  Fanboy.call(this, opts)
+  FanboyTransform.call(this, opts)
 }
 
 function resKey (id) {
@@ -283,32 +283,30 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
   })
 }
 
-util.inherits(Search, Fanboy)
+util.inherits(Search, FanboyTransform)
 function Search (opts) {
   if (!(this instanceof Search)) return new Search(opts)
-  Fanboy.call(this, opts)
+  FanboyTransform.call(this, opts)
 }
 
-// TODO: Something seems to be off with ttl. Investigate
-// Had disappearing terms
 function stale (time, ttl) {
   return Date.now() - time > ttl
 }
 
 Search.prototype.keysForTerm = function (term, cb) {
-  var db = this.db
-    , ttl = this.ttl
-    , me = this
-    ;
-  db.get(termKey(term), function (er, value) {
+  var ttl = this.ttl
+  this.db.get(termKey(term), function (er, value) {
     var keys
     if (value) {
       try {
         keys = JSON.parse(value)
-        if (stale(keys.shift(), ttl)) keys = null
-      } catch (er) {
-        er.warn = true
-        me.emit('error', er)
+        if (stale(keys.shift(), ttl)) {
+          er = new Error('stale keys for ' + term)
+          er.notFound = true
+          keys = null
+        }
+      } catch (ex) {
+        er = ex
       }
     }
     cb(er, keys)
@@ -344,19 +342,18 @@ Search.prototype._transform = function (chunk, enc, cb) {
     ;
   this.keysForTerm(term, function (er, keys) {
     if (er) {
-      if (er.notFound) return me.request(term, cb)
-    } else if (keys && keys.length) {
-      return me.resultsForKeys(keys, cb)
+      return er.notFound ? me.request(term, cb) : cb(er)
+    } else {
+      me.resultsForKeys(keys, cb)
     }
-    cb(new Error('no keys for ' + term))
   })
 }
 
 // Suggest search terms
-util.inherits(SearchTerms, Fanboy)
+util.inherits(SearchTerms, FanboyTransform)
 function SearchTerms (opts) {
   if (!(this instanceof SearchTerms)) return new SearchTerms(opts)
-  Fanboy.call(this, opts)
+  FanboyTransform.call(this, opts)
 }
 
 function keyStream (db, term) {
@@ -392,7 +389,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
 }
 
 if (process.env.NODE_TEST) {
-  exports.base = Fanboy
+  exports.base = FanboyTransform
   exports.defaults = defaults
   exports.debug = debug
   exports.noop = noop
