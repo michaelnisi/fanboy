@@ -1,7 +1,7 @@
 
 # fanboy - search iTunes store
 
-The Fanboy [Node.js](http://nodejs.org/) module implements cached search in the iTunes store using the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
+The Fanboy [Node.js](http://nodejs.org/) package implements cached search in the iTunes store using the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy) [![David DM](https://david-dm.org/michaelnisi/fanboy.svg)](http://david-dm.org/michaelnisi/fanboy)
 
@@ -11,17 +11,14 @@ The Fanboy [Node.js](http://nodejs.org/) module implements cached search in the 
 var fanboy = require('fanboy')
   , levelup = require('levelup')
   ;
-var _opts
-function opts () {
-  return _opts || (_opts = {
-    media: 'podcast'
-  , db: levelup('/tmp/fanboy')
-  })
-}
+var f = fanboy({
+  media:'podcast'
+, db:levelup('/tmp/fanboy')
+})
 ```
 
 ```js
-var search = fanboy.search(opts())
+var search = f.search()
 search.end('merlin mann')
 search.pipe(process.stdout)
 ```
@@ -31,7 +28,7 @@ $ node example/search.js | json
 ```
 
 ```js
-var lookup = fanboy.lookup(opts())
+var lookup = f.lookup()
 lookup.end('471418144')
 lookup.pipe(process.stdout)
 ```
@@ -41,7 +38,7 @@ $ node example/lookup.js | json
 ```
 
 ```js
-var suggest = fanboy.suggest(opts())
+var suggest = f.suggest()
 suggest.end('mer')
 suggest.pipe(process.stdout)
 ```
@@ -58,7 +55,7 @@ The mandatory [LevelUP](https://github.com/rvagg/node-levelup) instance.
 
 ### opts()
 
-The options for the Fanboy store.
+The options for the Fanboy `cache`:
 
 ```js
 - country String() | 'us'
@@ -70,23 +67,24 @@ The options for the Fanboy store.
 - port Number() | 443
 - readableObjectMode Boolean() | false
 - reduce function | './lib/reduce'
-- term String() | '*'
 - ttl Number() | 72 * 3600000
 ```
 
 ## exports
 
-Fanboy has a stateless API exporting three functions.
+### fanboy(opts())
 
-### search(opts())
+To access the `Fanboy` class `require('fanboy')`.
+
+### fanboy.search()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform)  stream where input is search terms as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
-### lookup(opts())
+### fanboy.lookup()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is guids as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
-### suggest(opts())
+### fanboy.suggest()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is search terms as `String` or `Buffer` and output is search terms as `JSON` `Buffer` or `String`.
 

@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "search iTunes store",
   "main": "index.js",
   "directories": {
@@ -10,34 +10,31 @@
   "scripts": {
     "test": "export NODE_TEST=1 ; tap --tap test/*.js"
   },
-  "keywords": [
-    "itunes",
-    "search",
-    "api",
-    "cache"
-  ],
-  "engines": {
-    "node": "0.10.x"
-  },
   "dependencies": {
     "JSONStream": "^0.9.0",
+    "gridlock": "^1.0.0",
     "level-random": "^1.0.1",
+    "leveldown": "^0.10.2",
     "levelup": "^0.18.6",
+    "lru-cache": "^2.5.0",
     "rimraf": "^2.2.8",
     "routes": "^1.2.0"
   },
   "devDependencies": {
-    "leveldown": "^0.10.2",
     "tap": "^0.4.12"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/michaelnisi/fanboy.git"
   },
+  "keywords": [],
   "author": "Michael Nisi <michael.nisi@gmail.com> (http://michaelnisi.com/)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/michaelnisi/fanboy/issues"
   },
-  "homepage": "https://github.com/michaelnisi/fanboy"
+  "homepage": "https://github.com/michaelnisi/fanboy",
+  "engines": {
+    "node": "0.10.x"
+  }
 }

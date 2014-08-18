@@ -3,6 +3,14 @@ var test = require('tap').test
   , fanboy = require('../')
   ;
 
+test('isStale', function (t) {
+  var f = fanboy.isStale
+  t.ok(!f(Date.now(), 1), 'should not be stale')
+  t.ok(!f(Date.now() - 1, 1), 'should not be stale')
+  t.ok(f(Date.now() - 2, 1), 'should be stale')
+  t.end()
+})
+
 test('resOp', function (t) {
   var f = fanboy.resOp
   t.plan(1)

@@ -3,6 +3,6 @@ var opts = require('./opts')
   , fanboy = require('../')
   ;
 
-var search = fanboy.search(opts())
+var search = fanboy(opts()).search()
 search.end('merlin mann')
 search.pipe(process.stdout)

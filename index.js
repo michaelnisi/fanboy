@@ -1,21 +1,22 @@
 
 // fanboy - search itunes store
 
-exports.lookup = Lookup
-exports.search = Search
-exports.suggest = SearchTerms
+exports = module.exports = Fanboy
 
 var assert = require('assert')
-  , events = require('events')
-  , https = require('https')
-  , http = require('http')
   , JSONStream = require('JSONStream')
+  , events = require('events')
+  , gridlock = require('gridlock')
+  , http = require('http')
+  , https = require('https')
   , keys = require('./lib/keys')
-  , querystring = require('querystring')
   , lr = require('level-random')
+  , lru = require('lru-cache')
+  , querystring = require('querystring')
   , reduce = require('./lib/reduce')
   , stream = require('stream')
   , string_decoder = require('string_decoder')
+  , url = require('url')
   , util = require('util')
   ;
 
@@ -29,19 +30,40 @@ var debug = function () {
 }()
 
 function defaults (opts) {
-  opts = opts || Object.create(null)
+  opts = opts || Object.create(null)
+  opts.cache = opts.cache || { set:noop, get:noop, reset:noop }
   opts.country = opts.country || 'us'
   opts.db = opts.db
   opts.hostname = opts.hostname || 'itunes.apple.com'
+  opts.locker = opts.locker || { lock:noop, unlock:noop }
   opts.media = opts.media || 'all'
   opts.method = opts.method || 'GET'
   opts.path = opts.path || '/search'
   opts.port = opts.port || 443
   opts.readableObjectMode = opts.readableObjectMode || false
   opts.reduce = opts.reduce || reduce
-  opts.term = opts.term || '*'
   opts.ttl = opts.ttl || 72 * 3600000
   return opts
+}
+
+function Fanboy (opts) {
+  if (!(this instanceof Fanboy)) return new Fanboy(opts)
+  opts = defaults(opts)
+  opts.locker = gridlock()
+  opts.cache = lru({ maxAge:opts.ttl })
+  this.opts = opts
+}
+
+Fanboy.prototype.search = function () {
+  return new Search(this.opts)
+}
+
+Fanboy.prototype.lookup = function () {
+  return new Lookup(this.opts)
+}
+
+Fanboy.prototype.suggest = function () {
+  return new SearchTerms(this.opts)
 }
 
 util.inherits(FanboyTransform, stream.Transform)
@@ -129,11 +151,9 @@ function putOps (term, results, now) {
 
 function put (db, term, results, cb) {
   if (results && results.length) {
-    db.batch(putOps(term, results), function (er) {
-      cb(er)
-    })
+    db.batch(putOps(term, results), cb)
   } else {
-    cb()
+    cb(new Error('I will not store empty results'))
   }
 }
 
@@ -176,12 +196,39 @@ function listenerCount (emt, ev) {
 }
 
 // Request lookup or search for term
-// - term iTunes ID or search term
-FanboyTransform.prototype.request = function (term, cb) {
+// - term String() iTunes ID or search term
+// - stale Boolean() to signal that data for this term is already stored
+FanboyTransform.prototype.request = function (term, stale, cb) {
+  if (typeof stale === 'function') {
+    cb = stale
+    stale = false
+  }
+  // Do we already know that there will be no results for this?
+  if (this.cache.get(term)) {
+    return cb(new Error('cached null'))
+  }
   var opts = this.reqOpts(term)
     , me = this
-    , httpModule = opts.port === 443 ? https : http
     ;
+  function get () {
+    me.keysForTerm(term, function (er, keys) {
+      if (er) return cb(er)
+      me.resultsForKeys(keys, cb)
+    })
+  }
+  var lock = opts.path
+  function unlock () {
+    me.locker.unlock(lock)
+  }
+  // Is what we want already in flight?
+  if (this.locker.lock(lock)) {
+    me.locker.once(lock, function () {
+      get()
+    })
+    return
+  }
+  // If we reach this, we have to attempt the request.
+  var httpModule = opts.port === 443 ? https : http
   var req = httpModule.request(opts, function (res) {
     var parser = JSONStream.parse('results.*')
       , results = []
@@ -204,12 +251,14 @@ FanboyTransform.prototype.request = function (term, cb) {
       }
     })
     function done (er) {
+      cb(er)
       parser.removeAllListeners()
       res.removeAllListeners()
-      cb(er)
+      unlock()
     }
     parser.once('root', function (root, count) {
       if (!count) {
+        me.cache.set(term, true)
         parserError = new Error('JSON contained no results')
         req.abort()
       }
@@ -230,7 +279,9 @@ FanboyTransform.prototype.request = function (term, cb) {
   })
 
   req.on('error', function (er) {
-    cb(er)
+    unlock()
+    // Assuming outage it temporary stale data should do.
+    stale ? get() : cb(er)
   })
   req.end()
 }
@@ -289,20 +340,20 @@ function Search (opts) {
   FanboyTransform.call(this, opts)
 }
 
-function stale (time, ttl) {
+function isStale (time, ttl) {
   return Date.now() - time > ttl
 }
 
 Search.prototype.keysForTerm = function (term, cb) {
   var ttl = this.ttl
   this.db.get(termKey(term), function (er, value) {
-    var keys
+    var keys = undefined
     if (value) {
       try {
         keys = JSON.parse(value)
-        if (stale(keys.shift(), ttl)) {
+        if (isStale(keys.shift(), ttl)) {
           er = new Error('stale keys for ' + term)
-          er.notFound = true
+          er.notFound = er.stale = true
           keys = null
         }
       } catch (ex) {
@@ -342,7 +393,7 @@ Search.prototype._transform = function (chunk, enc, cb) {
     ;
   this.keysForTerm(term, function (er, keys) {
     if (er) {
-      return er.notFound ? me.request(term, cb) : cb(er)
+      return er.notFound ? me.request(term, er.stale, cb) : cb(er)
     } else {
       me.resultsForKeys(keys, cb)
     }
@@ -390,11 +441,15 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
 
 if (process.env.NODE_TEST) {
   exports.base = FanboyTransform
-  exports.defaults = defaults
   exports.debug = debug
+  exports.defaults = defaults
+  exports.isStale = isStale
+  exports.lookup = Lookup
   exports.noop = noop
   exports.putOps = putOps
   exports.reduce = reduce
   exports.resOp = resOp
+  exports.search = Search
+  exports.suggest = SearchTerms
   exports.termOp = termOp
 }

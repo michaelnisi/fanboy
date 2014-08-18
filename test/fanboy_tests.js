@@ -8,16 +8,17 @@ test('defaults', function (t) {
   t.plan(2)
   t.ok(!!f())
   var wanted = {
-    country: 'us'
+    cache: { get:fanboy.noop, set:fanboy.noop, reset:fanboy.noop }
+  , country: 'us'
   , db: undefined
   , hostname: 'itunes.apple.com'
+  , locker: { lock:fanboy.noop, unlock:fanboy.noop }
   , media: 'all'
   , method: 'GET'
   , path: '/search'
   , port: 443
   , readableObjectMode: false
   , reduce: fanboy.reduce
-  , term: '*'
   , ttl: 259200000
   }
   t.deepEquals(f(), wanted)
@@ -39,7 +40,7 @@ test('Lookup', function (t) {
 })
 
 test('FanboyTransform', function (t) {
-  t.plan(14)
+  t.plan(13)
   var f = fanboy.base
   var obj = f()
   t.ok(obj instanceof f)
@@ -48,7 +49,6 @@ test('FanboyTransform', function (t) {
   t.is(typeof obj.reqOpts, 'function')
   t.is(typeof obj.request, 'function')
   t.is(obj.ttl, 259200000)
-  t.is(obj.term, '*')
   t.is(typeof obj.reduce, 'function')
   t.is(obj.port, 443)
   t.is(obj.method, 'GET')
