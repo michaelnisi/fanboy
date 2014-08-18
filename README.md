@@ -11,14 +11,14 @@ The Fanboy [Node.js](http://nodejs.org/) package implements cached search in the
 var fanboy = require('fanboy')
   , levelup = require('levelup')
   ;
-var f = fanboy({
+var store = fanboy({
   media:'podcast'
 , db:levelup('/tmp/fanboy')
 })
 ```
 
 ```js
-var search = f.search()
+var search = store.search()
 search.end('merlin mann')
 search.pipe(process.stdout)
 ```
@@ -28,7 +28,7 @@ $ node example/search.js | json
 ```
 
 ```js
-var lookup = f.lookup()
+var lookup = store.lookup()
 lookup.end('471418144')
 lookup.pipe(process.stdout)
 ```
@@ -38,7 +38,7 @@ $ node example/lookup.js | json
 ```
 
 ```js
-var suggest = f.suggest()
+var suggest = store.suggest()
 suggest.end('mer')
 suggest.pipe(process.stdout)
 ```
@@ -72,19 +72,21 @@ The options for the Fanboy `cache`:
 
 ## exports
 
-### fanboy(opts())
-
 To access the `Fanboy` class `require('fanboy')`.
 
-### fanboy.search()
+### require('fanboy')(opts())
+
+Returns a new `store` object.
+
+### store.search()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform)  stream where input is search terms as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
-### fanboy.lookup()
+### store.lookup()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is guids as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
-### fanboy.suggest()
+### store.suggest()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is search terms as `String` or `Buffer` and output is search terms as `JSON` `Buffer` or `String`.
 
