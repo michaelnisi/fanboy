@@ -1,9 +1,9 @@
 
-# fanboy - search iTunes store
+# fanboy - cache itunes search
 
-The Fanboy [Node.js](http://nodejs.org/) package implements cached search in the iTunes store using the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
+The Fanboy [Node.js](http://nodejs.org/) package implements a `cache` for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-cache-web-service-search-api.html).
 
-[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy) [![David DM](https://david-dm.org/michaelnisi/fanboy.svg)](http://david-dm.org/michaelnisi/fanboy)
+[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
 
 ## Usage
 
@@ -11,14 +11,14 @@ The Fanboy [Node.js](http://nodejs.org/) package implements cached search in the
 var fanboy = require('fanboy')
   , levelup = require('levelup')
   ;
-var store = fanboy({
+var cache = fanboy({
   media:'podcast'
 , db:levelup('/tmp/fanboy')
 })
 ```
 
 ```js
-var search = store.search()
+var search = cache.search()
 search.end('merlin mann')
 search.pipe(process.stdout)
 ```
@@ -28,7 +28,7 @@ $ node example/search.js | json
 ```
 
 ```js
-var lookup = store.lookup()
+var lookup = cache.lookup()
 lookup.end('471418144')
 lookup.pipe(process.stdout)
 ```
@@ -38,7 +38,7 @@ $ node example/lookup.js | json
 ```
 
 ```js
-var suggest = store.suggest()
+var suggest = cache.suggest()
 suggest.end('mer')
 suggest.pipe(process.stdout)
 ```
@@ -72,21 +72,17 @@ The options for the Fanboy `cache`:
 
 ## exports
 
-To access the `Fanboy` class `require('fanboy')`.
+The Fanboy module exports a single function that returns a new `cache` object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`.
 
-### require('fanboy')(opts())
-
-Returns a new `store` object.
-
-### store.search()
+### cache.search()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform)  stream where input is search terms as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
-### store.lookup()
+### cache.lookup()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is guids as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
 
-### store.suggest()
+### cache.suggest()
 
 [Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is search terms as `String` or `Buffer` and output is search terms as `JSON` `Buffer` or `String`.
 

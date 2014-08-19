@@ -1,7 +1,7 @@
 {
   "name": "fanboy",
-  "version": "2.0.2",
-  "description": "search iTunes store",
+  "version": "2.0.3",
+  "description": "cache itunes search",
   "main": "index.js",
   "directories": {
     "example": "example",
@@ -27,7 +27,9 @@
     "type": "git",
     "url": "https://github.com/michaelnisi/fanboy.git"
   },
-  "keywords": [],
+  "keywords": [
+    "proxy", "cache", "itunes", "search", "api"
+  ],
   "author": "Michael Nisi <michael.nisi@gmail.com> (http://michaelnisi.com/)",
   "license": "MIT",
   "bugs": {

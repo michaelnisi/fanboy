@@ -203,7 +203,6 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
     cb = stale
     stale = false
   }
-  // Do we already know that there will be no results for this?
   if (this.cache.get(term)) {
     return cb(new Error('cached null'))
   }
@@ -220,14 +219,12 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
   function unlock () {
     me.locker.unlock(lock)
   }
-  // Is what we want already in flight?
   if (this.locker.lock(lock)) {
     me.locker.once(lock, function () {
       get()
     })
     return
   }
-  // If we reach this, we have to attempt the request.
   var httpModule = opts.port === 443 ? https : http
   var req = httpModule.request(opts, function (res) {
     var parser = JSONStream.parse('results.*')
@@ -280,7 +277,6 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
 
   req.on('error', function (er) {
     unlock()
-    // Assuming outage it temporary stale data should do.
     stale ? get() : cb(er)
   })
   req.end()
