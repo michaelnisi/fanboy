@@ -1,7 +1,7 @@
 
 # fanboy - cache itunes search
 
-The Fanboy [Node.js](http://nodejs.org/) package implements a `cache` for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-cache-web-service-search-api.html).
+The **fanboy** [Node.js](http://nodejs.org/) package implements a cache for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-cache-web-service-search-api.html).
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
 
@@ -55,7 +55,7 @@ The mandatory [LevelUP](https://github.com/rvagg/node-levelup) instance.
 
 ### opts()
 
-The options for the Fanboy `cache`:
+The options for the **fanboy** cache:
 
 ```js
 - country String() | 'us'
@@ -72,7 +72,7 @@ The options for the Fanboy `cache`:
 
 ## exports
 
-The Fanboy module exports a single function that returns a new `cache` object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`.
+The **fanboy** module exports a single function that returns a new cache object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`.
 
 ### cache.search()
 

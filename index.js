@@ -366,11 +366,16 @@ Search.prototype.resultsForKeys = function (keys, cb) {
     ;
   values.on('error', cb)
   values.on('finish', cb)
+  var used = true
   function useValues () {
     var chunk
-    while (null !== (chunk = values.read())) {
-      if (!me.use(chunk)) return me.once('drain', useValues)
+    while (used && null !== (chunk = values.read())) {
+      used = me.use(chunk)
     }
+    if (!used) me.once('drain', function () {
+      used = true
+      useValues()
+    })
   }
   values.on('readable', useValues)
   function writeKeys () {
