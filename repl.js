@@ -1,20 +1,11 @@
 #!/usr/bin/env node
 
-// repl - dev repl
+// repl - dev REPL
 
-var levelup = require('levelup')
-  , fanboy = require('./')
+var fanboy = require('./')
+  , levelup = require('levelup')
   , repl = require('repl')
   ;
-
-var _opts
-function opts () {
-  return _opts || (_opts = {
-    media: 'podcast'
-  , db: levelup('/tmp/fanboy')
-  , readableObjectMode: true
-  })
-}
 
 process.on('uncaughtException', console.error)
 
@@ -22,4 +13,8 @@ repl.start({
   prompt: 'fanboy> '
 , input: process.stdin
 , output: process.stdout
-}).context.fanboy = fanboy(opts())
+}).context.fanboy = fanboy({
+  media: 'podcast'
+, db: levelup('/tmp/fanboy')
+, readableObjectMode: true
+})
