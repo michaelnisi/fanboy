@@ -1,20 +1,25 @@
 #!/usr/bin/env node
 
-// repl - dev REPL
+// repl - just a little REPL to play
 
 var fanboy = require('./')
-  , levelup = require('levelup')
-  , repl = require('repl')
-  ;
+var levelup = require('levelup')
+var repl = require('repl')
 
 process.on('uncaughtException', console.error)
 
-repl.start({
+var ctx = repl.start({
   prompt: 'fanboy> '
 , input: process.stdin
 , output: process.stdout
-}).context.fanboy = fanboy({
+}).context
+
+var svc = fanboy({
   media: 'podcast'
-, db: levelup('/tmp/fanboy')
+, db: levelup('/tmp/fanboy-repl')
 , readableObjectMode: true
 })
+
+ctx.search = svc.search()
+ctx.suggest = svc.suggest()
+ctx.lookup = svc.lookup()

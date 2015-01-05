@@ -3,54 +3,58 @@
 
 exports = module.exports = Fanboy
 
+var JSONStream = require('JSONStream')
 var assert = require('assert')
-  , JSONStream = require('JSONStream')
-  , events = require('events')
-  , gridlock = require('gridlock')
-  , http = require('http')
-  , https = require('https')
-  , keys = require('./lib/keys')
-  , lr = require('level-random')
-  , lru = require('lru-cache')
-  , querystring = require('querystring')
-  , reduce = require('./lib/reduce')
-  , stream = require('stream')
-  , string_decoder = require('string_decoder')
-  , url = require('url')
-  , util = require('util')
-  ;
+var events = require('events')
+var gridlock = require('gridlock')
+var http = require('http')
+var https = require('https')
+var keys = require('./lib/keys')
+var lr = require('level-random')
+var lru = require('lru-cache')
+var querystring = require('querystring')
+var reduce = require('./lib/reduce')
+var stream = require('stream')
+var string_decoder = require('string_decoder')
+var url = require('url')
+var util = require('util')
 
-function noop () {}
+function nop () {}
 
 var debug = function () {
   return process.env.NODE_DEBUG ?
     function (o) {
       console.error('**fanboy: %s', util.inspect(o))
-    } : noop
+    } : nop
 }()
 
-function defaults (opts) {
+function Opts (opts) {
   opts = opts || Object.create(null)
-  opts.cache = opts.cache || { set:noop, get:noop, reset:noop }
-  opts.country = opts.country || 'us'
-  opts.db = opts.db
-  opts.hostname = opts.hostname || 'itunes.apple.com'
-  opts.locker = opts.locker || { lock:noop, unlock:noop }
-  opts.media = opts.media || 'all'
-  opts.method = opts.method || 'GET'
-  opts.path = opts.path || '/search'
-  opts.port = opts.port || 443
-  opts.readableObjectMode = opts.readableObjectMode || false
-  opts.reduce = opts.reduce || reduce
-  opts.ttl = opts.ttl || 72 * 3600000
-  return opts
+  this.cache = opts.cache || { set:nop, get:nop, reset:nop }
+  this.country = opts.country || 'us'
+  this.db = opts.db
+  this.hostname = opts.hostname || 'itunes.apple.com'
+  this.locker = opts.locker || { lock:nop, unlock:nop }
+  this.max = opts.max || 500
+  this.media = opts.media || 'all'
+  this.method = opts.method || 'GET'
+  this.path = opts.path || '/search'
+  this.port = opts.port || 80
+  this.readableObjectMode = opts.readableObjectMode || false
+  this.reduce = opts.reduce || reduce
+  this.ttl = opts.ttl || 72 * 3600000
+}
+
+function defaults (opts) {
+  return new Opts(opts)
 }
 
 function Fanboy (opts) {
   if (!(this instanceof Fanboy)) return new Fanboy(opts)
   opts = defaults(opts)
   opts.locker = gridlock()
-  opts.cache = lru({ maxAge:opts.ttl })
+  // We cache terms for which requests have been in vain.
+  opts.cache = lru({ maxAge:opts.ttl, max: opts.max })
   this.opts = opts
 }
 
@@ -105,6 +109,18 @@ FanboyTransform.prototype._flush = function () {
     if (this.state) this.push(TOKENS[2])
     this.state = 0
   }
+  this.cache = null
+  this.country = null
+  this.db = null
+  this.decoder = null
+  this.hostname = null
+  this.locker = null
+  this.max = null
+  this.media = null
+  this.method = null
+  this.path = null
+  this.reduce = null
+  this.ttl = null
 }
 
 // Bulk-write operation
@@ -120,30 +136,26 @@ function termKey (term) {
 
 function termOp (term, keys, now) {
   now = now || Date.now()
-  var key = termKey(term)
-    , val = JSON.stringify([now].concat(keys))
-    ;
-  return new Bulk('put', key, val)
+  var k = termKey(term)
+  var v = JSON.stringify([now].concat(keys))
+  return new Bulk('put', k, v)
 }
 
 function resOp (result, now) {
   now = now || Date.now()
   result.ts = now
-  var key = resKey(result.guid)
-    , val = JSON.stringify(result)
-    ;
-  return new Bulk('put', key, val)
+  var k = resKey(result.guid)
+  var v = JSON.stringify(result)
+  return new Bulk('put', k, v)
 }
 
 function putOps (term, results, now) {
   var op
-    , ops = []
-    , keys = []
-    ;
-  results.forEach(function (result) {
+  var ops = []
+  var keys = results.map(function (result) {
     op = resOp(result, now)
     ops.push(op)
-    keys.push(op.key)
+    return op.key
   })
   ops.push(termOp(term, keys, now))
   return ops
@@ -179,7 +191,7 @@ function ReqOpts (hostname, port, method, path) {
   this.path = path
 }
 
-// HTTPS request options
+// HTTP request options
 // - term The search term
 FanboyTransform.prototype.reqOpts = function (term) {
   term = term || this.term
@@ -195,7 +207,7 @@ function listenerCount (emt, ev) {
   return events.EventEmitter.listenerCount(emt, ev)
 }
 
-// Request lookup or search for term
+// Request lookup or search for term. Hold on to your butts!
 // - term String() iTunes ID or search term
 // - stale Boolean() to signal that data for this term is already stored
 FanboyTransform.prototype.request = function (term, stale, cb) {
@@ -207,8 +219,7 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
     return cb(new Error('cached null'))
   }
   var opts = this.reqOpts(term)
-    , me = this
-    ;
+  var me = this
   function get () {
     me.keysForTerm(term, function (er, keys) {
       if (er) return cb(er)
@@ -228,10 +239,9 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
   var httpModule = opts.port === 443 ? https : http
   var req = httpModule.request(opts, function (res) {
     var parser = JSONStream.parse('results.*')
-      , results = []
-      , reduce = me.reduce
-      , parserError
-      ;
+    var results = []
+    var reduce = me.reduce
+    var parserError
     function parserData (obj) {
       var result = reduce(obj)
       if (result) {
@@ -248,10 +258,11 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
       }
     })
     function done (er) {
-      cb(er)
       parser.removeAllListeners()
       res.removeAllListeners()
+      res.unpipe()
       unlock()
+      cb(er)
     }
     parser.once('root', function (root, count) {
       if (!count) {
@@ -262,7 +273,8 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
     })
 
     var db = me.db
-    res.once('end', function (chunk) {
+    res.once('error', done)
+    res.on('end', function (chunk) {
       if (results.length) {
         put(db, term, results, function (er) {
           results = null
@@ -275,10 +287,12 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
     res.pipe(parser)
   })
 
-  req.on('error', function (er) {
+  function reqError (er) {
     unlock()
+    req.removeListener('error', reqError)
     stale ? get() : cb(er)
-  })
+  }
+  req.on('error', reqError)
   req.end()
 }
 
@@ -313,9 +327,8 @@ function resultForID (db, id, cb) {
 // - chunk iTunes ID (e.g. '537879700')
 Lookup.prototype._transform = function (chunk, enc, cb) {
   var me = this
-    , db = this.db
-    , id = this.decode(chunk)
-    ;
+  var db = this.db
+  var id = this.decode(chunk)
   resultForID(db, id, function (er, value) {
     if (er) {
       if (er.notFound) {
@@ -362,10 +375,14 @@ Search.prototype.keysForTerm = function (term, cb) {
 
 Search.prototype.resultsForKeys = function (keys, cb) {
   var me = this
-    , values = lr({ db:this.db })
-    ;
-  values.on('error', cb)
-  values.on('finish', cb)
+  var values = lr({ db:this.db })
+  function done (er) {
+    me.decoder.end()
+    values.removeAllListeners()
+    cb(er)
+  }
+  values.on('error', done)
+  values.on('finish', done)
   var used = true
   function useValues () {
     var chunk
@@ -390,8 +407,7 @@ Search.prototype.resultsForKeys = function (keys, cb) {
 
 Search.prototype._transform = function (chunk, enc, cb) {
   var term = this.decode(chunk)
-    , me = this
-    ;
+  var me = this
   this.keysForTerm(term, function (er, keys) {
     if (er) {
       return er.notFound ? me.request(term, er.stale, cb) : cb(er)
@@ -414,13 +430,11 @@ function keyStream (db, term) {
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
   var term = this.decode(chunk).toLowerCase()
-    , me = this
-    , stream = keyStream(this.db, term)
-    ;
+  var me = this
+  var stream = keyStream(this.db, term)
   stream.on('readable', function () {
     var key
-      , term
-      ;
+    var term
     (function go () {
       while (null !== (key = stream.read())) {
         term = key.split(keys.DIV)[2]
@@ -431,13 +445,12 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
       }
     })()
   })
-  stream.on('error', function (er) {
+  function done (er) {
     cb(er)
-  })
-  stream.once('end', function () {
     stream.removeAllListeners()
-    cb()
-  })
+  }
+  stream.on('error', done)
+  stream.once('end', done)
 }
 
 if (process.env.NODE_TEST) {
@@ -446,7 +459,7 @@ if (process.env.NODE_TEST) {
   exports.defaults = defaults
   exports.isStale = isStale
   exports.lookup = Lookup
-  exports.noop = noop
+  exports.nop = nop
   exports.putOps = putOps
   exports.reduce = reduce
   exports.resOp = resOp

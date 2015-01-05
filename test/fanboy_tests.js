@@ -8,15 +8,16 @@ test('defaults', function (t) {
   t.plan(2)
   t.ok(!!f())
   var wanted = {
-    cache: { get:fanboy.noop, set:fanboy.noop, reset:fanboy.noop }
+    cache: { get:fanboy.nop, set:fanboy.nop, reset:fanboy.nop }
   , country: 'us'
   , db: undefined
   , hostname: 'itunes.apple.com'
-  , locker: { lock:fanboy.noop, unlock:fanboy.noop }
+  , locker: { lock:fanboy.nop, unlock:fanboy.nop }
+  , max: 500
   , media: 'all'
   , method: 'GET'
   , path: '/search'
-  , port: 443
+  , port: 80
   , readableObjectMode: false
   , reduce: fanboy.reduce
   , ttl: 259200000
@@ -40,7 +41,7 @@ test('Lookup', function (t) {
 })
 
 test('FanboyTransform', function (t) {
-  t.plan(13)
+  t.plan(14)
   var f = fanboy.base
   var obj = f()
   t.ok(obj instanceof f)
@@ -50,7 +51,8 @@ test('FanboyTransform', function (t) {
   t.is(typeof obj.request, 'function')
   t.is(obj.ttl, 259200000)
   t.is(typeof obj.reduce, 'function')
-  t.is(obj.port, 443)
+  t.is(obj.port, 80)
+  t.is(obj.max, 500)
   t.is(obj.method, 'GET')
   t.is(obj.media, 'all')
   t.is(obj.country, 'us')

@@ -1,8 +1,7 @@
 
 var opts = require('./opts')
-  , fanboy = require('../')
-  ;
+var fanboy = require('../')
 
 var suggest = fanboy(opts()).suggest()
-suggest.end('mer')
+suggest.end('m')
 suggest.pipe(process.stdout)

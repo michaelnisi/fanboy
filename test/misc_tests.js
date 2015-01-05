@@ -19,7 +19,7 @@ test('resOp', function (t) {
 })
 
 test('debug', function (t) {
-  t.ok((fanboy.debug === fanboy.noop) === !process.env.DEBUG)
+  t.ok((fanboy.debug === fanboy.nop) === !process.env.DEBUG)
   t.end()
 })
 
