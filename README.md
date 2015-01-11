@@ -52,13 +52,13 @@ The options for the **fanboy** cache:
 
 - `country` `String` which defaults to `'us'`
 - `db` The mandatory [LevelUP](https://github.com/rvagg/node-levelup) instance
-- `hostname String` which defaults to `'itunes.apple.com'`
-- `media String` which defaults to `'all'`
-- `method String` which defaults to `'GET'`
-- `path String` which defautls to `'/search'`
-- `port Number` which defaults to `80`
-- `readableObjectMode Boolean` which defaults to `false`
-- `reduce function` which defaults to the `lib/reduce` module
+- `hostname` `String` which defaults to `'itunes.apple.com'`
+- `media` `String` which defaults to `'all'`
+- `method` `String` which defaults to `'GET'`
+- `path` `String` which defautls to `'/search'`
+- `port` `Number` which defaults to `80`
+- `readableObjectMode` `Boolean` which defaults to `false`
+- `reduce` `function` which defaults to the `lib/reduce` module
 - `ttl` Time to live `Number` which defaults to `72 * 3600000`
 
 ## exports
@@ -72,15 +72,15 @@ var cache = fanboy(opts())
 
 ### cache.search()
 
-[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform)  stream where input is search terms as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
+[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform)  stream where input is search terms as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
 
 ### cache.lookup()
 
-[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is guids as `String` or `Buffer` and output is search results as `JSON` `Buffer` or `Object`.
+[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is guids as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
 
 ### cache.suggest()
 
-[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is search terms as `String` or `Buffer` and output is search terms as `JSON` `Buffer` or `String`.
+[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is search terms as `String` or `Buffer` and output is search terms as JSON `Buffer` or `String`.
 
 ## Installation
 
