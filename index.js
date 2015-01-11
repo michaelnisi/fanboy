@@ -104,23 +104,16 @@ FanboyTransform.prototype.use = function (chunk) {
   }
 }
 
-FanboyTransform.prototype._flush = function () {
+FanboyTransform.prototype._flush = function (cb) {
   if (!this._readableState.objectMode) {
     if (this.state) this.push(TOKENS[2])
     this.state = 0
   }
   this.cache = null
-  this.country = null
   this.db = null
-  this.decoder = null
-  this.hostname = null
   this.locker = null
-  this.max = null
-  this.media = null
-  this.method = null
-  this.path = null
   this.reduce = null
-  this.ttl = null
+  cb()
 }
 
 // Bulk-write operation
@@ -377,7 +370,6 @@ Search.prototype.resultsForKeys = function (keys, cb) {
   var me = this
   var values = lr({ db:this.db })
   function done (er) {
-    me.decoder.end()
     values.removeAllListeners()
     cb(er)
   }
