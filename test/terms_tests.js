@@ -1,10 +1,14 @@
 
 var test = require('tap').test
-  , common = require('./common')
-  , fanboy = require('../')
-  , keys = require('../lib/keys')
-  , string_decoder = require('string_decoder')
-  ;
+var common = require('./common')
+var fanboy = require('../')
+var keys = require('../lib/keys')
+var string_decoder = require('string_decoder')
+
+var _decoder = new string_decoder.StringDecoder('utf8')
+function decode (buf) {
+  return _decoder.write(buf)
+}
 
 test('setup', function (t) {
   common.setup(t)
@@ -30,10 +34,17 @@ function puts () {
   return puts
 }
 
-var _decoder = new string_decoder.StringDecoder('utf8')
-function decode (buf) {
-  return _decoder.write(buf)
-}
+test('no results', function (t) {
+  t.plan(1)
+  var db = common.db()
+  var found = []
+  var f = fanboy.suggest({ db:db })
+  f.on('error', function (er) {
+    t.is(er.message, 'no results')
+    t.end()
+  })
+  f.end('xoxoxo')
+})
 
 test('suggest', function (t) {
   var db = common.db()
@@ -42,6 +53,9 @@ test('suggest', function (t) {
   db.batch(puts(), function (er) {
     t.ok(!er)
     var f = fanboy.suggest({ db:db })
+    f.on('error', function (er) {
+      t.is(er.message, 'no results')
+    })
     f.on('readable', function () {
       var chunk
       while (null !== (chunk = f.read())) {

@@ -70,7 +70,7 @@ test('simple', function (t) {
   })
 })
 
-test('no keys', function (t) {
+test('not found', function (t) {
   t.plan(2)
   var f = fanboy.search(opts())
   f.keysForTerm('abc', function (er, keys) {
@@ -78,6 +78,18 @@ test('no keys', function (t) {
     t.is(keys, undefined)
     t.end()
   })
+})
+
+test('no results', function (t) {
+  t.plan(1)
+  var db = common.db()
+  var found = []
+  var f = fanboy.search({ db:db })
+  f.on('error', function (er) {
+    t.is(er.message, 'no results')
+    t.end()
+  })
+  f.end('xoxoxo')
 })
 
 test('teardown', function (t) {

@@ -366,9 +366,14 @@ Search.prototype.keysForTerm = function (term, cb) {
   })
 }
 
+function LROpts (db) {
+  this.db = db
+  this.fillCache = true
+}
+
 Search.prototype.resultsForKeys = function (keys, cb) {
   var me = this
-  var values = lr({ db:this.db })
+  var values = lr(new LROpts(this.db))
   function done (er) {
     values.removeAllListeners()
     cb(er)
@@ -424,7 +429,9 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
   var term = this.decode(chunk).toLowerCase()
   var me = this
   var stream = keyStream(this.db, term)
+  var read = false
   stream.on('readable', function () {
+    read = true
     var key
     var term
     (function go () {
@@ -438,6 +445,9 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     })()
   })
   function done (er) {
+    if (!read) {
+      me.emit('error', new Error('no results'))
+    }
     cb(er)
     stream.removeAllListeners()
   }

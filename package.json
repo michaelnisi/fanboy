@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "cache itunes search",
   "main": "index.js",
   "directories": {
@@ -13,7 +13,7 @@
   "dependencies": {
     "JSONStream": "^0.9.0",
     "gridlock": "^1.0.0",
-    "level-random": "^1.1.1",
+    "level-random": "^1.2.0",
     "lru-cache": "^2.5.0"
   },
   "devDependencies": {
