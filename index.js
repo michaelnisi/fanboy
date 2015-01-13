@@ -369,6 +369,7 @@ Search.prototype.keysForTerm = function (term, cb) {
 function LROpts (db) {
   this.db = db
   this.fillCache = true
+  this.errorIfNotExists = true
 }
 
 Search.prototype.resultsForKeys = function (keys, cb) {
@@ -445,7 +446,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     })()
   })
   function done (er) {
-    if (!read) {
+    if (!er && !read) { // don't shadow stream error
       me.emit('error', new Error('no results'))
     }
     cb(er)
