@@ -33,6 +33,8 @@ function Opts (opts) {
   this.cache = opts.cache || { set:nop, get:nop, reset:nop }
   this.country = opts.country || 'us'
   this.db = opts.db
+  this.encoding = opts.encoding
+  this.highWaterMark = opts.highWaterMark
   this.hostname = opts.hostname || 'itunes.apple.com'
   this.locker = opts.locker || { lock:nop, unlock:nop }
   this.max = opts.max || 500
@@ -40,9 +42,9 @@ function Opts (opts) {
   this.method = opts.method || 'GET'
   this.path = opts.path || '/search'
   this.port = opts.port || 80
-  this.readableObjectMode = opts.readableObjectMode || false
+  this.readableObjectMode = opts.readableObjectMode
   this.reduce = opts.reduce || reduce
-  this.ttl = opts.ttl || 72 * 3600000
+  this.ttl = opts.ttl || 24 * 60 * 60 * 1000
 }
 
 function defaults (opts) {
@@ -53,7 +55,6 @@ function Fanboy (opts) {
   if (!(this instanceof Fanboy)) return new Fanboy(opts)
   opts = defaults(opts)
   opts.locker = gridlock()
-  // We cache terms for which requests have been in vain.
   opts.cache = lru({ maxAge:opts.ttl, max: opts.max })
   this.opts = opts
 }
@@ -92,7 +93,6 @@ FanboyTransform.prototype.use = function (chunk) {
     try {
       obj = JSON.parse(chunk)
     } catch (er) {
-      er.warn = true
       this.emit('error', er)
       return true
     }
@@ -104,15 +104,19 @@ FanboyTransform.prototype.use = function (chunk) {
   }
 }
 
-FanboyTransform.prototype._flush = function (cb) {
-  if (!this._readableState.objectMode) {
-    if (this.state) this.push(TOKENS[2])
-    this.state = 0
-  }
+FanboyTransform.prototype.deinit = function () {
   this.cache = null
   this.db = null
   this.locker = null
   this.reduce = null
+}
+
+FanboyTransform.prototype._flush = function (cb) {
+  if (!this._readableState.objectMode) {
+    this.push(this.state ? TOKENS[2] : '[]\n')
+    this.state = 0
+  }
+  this.deinit()
   cb()
 }
 
@@ -200,22 +204,24 @@ function listenerCount (emt, ev) {
   return events.EventEmitter.listenerCount(emt, ev)
 }
 
-// Request lookup or search for term. Hold on to your butts!
+// Request lookup or search for term.
 // - term String() iTunes ID or search term
 // - stale Boolean() to signal that data for this term is already stored
 FanboyTransform.prototype.request = function (term, stale, cb) {
+  var objectMode = this._readableState.objectMode
   if (typeof stale === 'function') {
     cb = stale
     stale = false
   }
-  if (this.cache.get(term)) {
-    return cb(new Error('cached null'))
-  }
-  var opts = this.reqOpts(term)
   var me = this
+  function cached () {
+    return me.cache.get(term)
+  }
+  if (cached()) return cb()
+  var opts = this.reqOpts(term)
   function get () {
+    if (cached()) return cb()
     me.keysForTerm(term, function (er, keys) {
-      if (er) return cb(er)
       me.resultsForKeys(keys, cb)
     })
   }
@@ -224,68 +230,79 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
     me.locker.unlock(lock)
   }
   if (this.locker.lock(lock)) {
-    me.locker.once(lock, function () {
-      get()
-    })
-    return
+    return me.locker.once(lock, get)
   }
   var httpModule = opts.port === 443 ? https : http
   var req = httpModule.request(opts, function (res) {
+    if (res.statusCode !== 200) {
+      res.once('end', function () {
+        unlock()
+        cb()
+      })
+      return res.resume()
+    }
+    var ok = false
     var parser = JSONStream.parse('results.*')
-    var results = []
     var reduce = me.reduce
-    var parserError
+    var results = []
+    var error // just one per request
     function parserData (obj) {
       var result = reduce(obj)
-      if (result) {
+      ok = !!result
+      if (ok) {
         results.push(result)
         me.use(JSON.stringify(result))
       }
     }
-    parser.on('data', parserData)
-    parser.on('error', function (er) {
+    function parserError (er) {
       if (listenerCount(parser, 'data')) {
+        error = new Error('could not parse data as JSON')
         parser.removeListener('data', parserData)
         parser.end()
-        parserError = er
       }
-    })
+    }
+    function parserRoot (root, count) {
+      if (!count) req.abort()
+    }
     function done (er) {
-      parser.removeAllListeners()
-      res.removeAllListeners()
+      parser.removeListener('data', parserData)
+      parser.removeListener('error', parserError)
+      parser.removeListener('root', parserRoot)
+      res.removeListener('error', done)
+      res.removeListener('end', resEnd)
       res.unpipe()
       unlock()
       cb(er)
     }
-    parser.once('root', function (root, count) {
-      if (!count) {
-        me.cache.set(term, true)
-        parserError = new Error('JSON contained no results')
-        req.abort()
-      }
-    })
+    parser.on('data', parserData)
+    parser.on('error', parserError)
+    parser.once('root', parserRoot)
 
     var db = me.db
-    res.once('error', done)
-    res.on('end', function (chunk) {
+    function resEnd (chunk) {
       if (results.length) {
         put(db, term, results, function (er) {
           results = null
           done(er)
         })
       } else {
-        done(parserError || new Error('no results'))
+        me.cache.set(term, true)
+        done(error)
       }
-    })
-    res.pipe(parser)
+    }
+    res.once('error', done)
+    res.on('end', resEnd)
+    res.pipe(parser) // streams1 parser
   })
 
   function reqError (er) {
     unlock()
     req.removeListener('error', reqError)
-    stale ? get() : cb(er)
+    if (stale) return get()
+    cb(er)
   }
   req.on('error', reqError)
+  req.setSocketKeepAlive(true)
   req.end()
 }
 
@@ -328,9 +345,7 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
         return me.request(id, cb)
       }
     } else if (value !== undefined) {
-      if (!me.use(value)) {
-        er = new Error('wait!')
-      }
+      me.use(value)
     }
     cb(er)
   })
@@ -349,8 +364,8 @@ function isStale (time, ttl) {
 Search.prototype.keysForTerm = function (term, cb) {
   var ttl = this.ttl
   this.db.get(termKey(term), function (er, value) {
-    var keys = undefined
-    if (value) {
+    var keys
+    if (!er && !!value) {
       try {
         keys = JSON.parse(value)
         if (isStale(keys.shift(), ttl)) {
@@ -374,33 +389,50 @@ function LROpts (db) {
 
 Search.prototype.resultsForKeys = function (keys, cb) {
   var me = this
-  var values = lr(new LROpts(this.db))
-  function done (er) {
-    values.removeAllListeners()
-    cb(er)
-  }
-  values.on('error', done)
-  values.on('finish', done)
-  var used = true
-  function useValues () {
+  var stream = lr(new LROpts(this.db))
+  function read () {
+    var ok = true
     var chunk
-    while (used && null !== (chunk = values.read())) {
-      used = me.use(chunk)
+    while (ok && null !== (chunk = stream.read())) {
+      ok = me.use(chunk)
     }
-    if (!used) me.once('drain', function () {
-      used = true
-      useValues()
+    if (!ok) me.once('drain', function () {
+      read()
     })
   }
-  values.on('readable', useValues)
-  function writeKeys () {
-    var ok = true
-    do {
-      ok = values.write(keys.shift())
-    } while (ok && keys.length)
-    keys.length ? values.once('drain', writeKeys) : values.end()
+  var notFound = []
+  function streamError (er) {
+    if (!er.notFound) return done(er)
+    er.ok = true
+    notFound.push(er)
   }
-  writeKeys()
+  function write () {
+    var ok = true
+    while (ok && keys.length) {
+      ok = stream.write(keys.shift())
+    }
+    keys.length ? stream.once('drain', write) : stream.end()
+  }
+  function done (er) {
+    var inconsistent = !!notFound.length
+    if (inconsistent) {
+      er = new Error('inconsistent database suspected')
+    }
+    me.removeListener('drain', read)
+    stream.removeListener('drain', write)
+    stream.removeListener('error', streamError)
+    stream.removeListener('finish', done)
+    stream.removeListener('readable', streamReadable)
+    cb(er)
+  }
+  function streamReadable () {
+    read()
+  }
+  stream.on('error', streamError)
+  stream.on('finish', done)
+  stream.on('readable', streamReadable)
+
+  write()
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
@@ -408,7 +440,11 @@ Search.prototype._transform = function (chunk, enc, cb) {
   var me = this
   this.keysForTerm(term, function (er, keys) {
     if (er) {
-      return er.notFound ? me.request(term, er.stale, cb) : cb(er)
+      if (er.notFound) {
+        me.request(term, er.stale, cb)
+      } else {
+        cb(er)
+      }
     } else {
       me.resultsForKeys(keys, cb)
     }
@@ -426,34 +462,46 @@ function keyStream (db, term) {
   return db.createKeyStream(keys.range(keys.TRM, term))
 }
 
+function checkDB (db) {
+  var open = db._status === 'opening' || db._status === 'open'
+  if (!open) return new Error('database not open')
+}
+
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
+  var er = checkDB(this.db)
+  if (er) return cb(er)
   var term = this.decode(chunk).toLowerCase()
   var me = this
+  var objectMode = this._readableState.objectMode
+  var ok = false
   var stream = keyStream(this.db, term)
-  var read = false
-  stream.on('readable', function () {
-    read = true
+  function read () {
     var key
     var term
-    (function go () {
-      while (null !== (key = stream.read())) {
-        term = key.split(keys.DIV)[2]
-        if (!me.use('"' + term + '"')) {
-          me.once('drain', go)
-          break
-        }
+    while (null !== (key = stream.read())) {
+      term = key.split(keys.DIV)[2]
+      if (!me.use('"' + term + '"')) {
+        me.once('drain', read)
+        break
       }
-    })()
-  })
-  function done (er) {
-    if (!er && !read) { // don't shadow stream error
-      me.emit('error', new Error('no results'))
     }
-    cb(er)
-    stream.removeAllListeners()
   }
+  function readable () {
+    ok = true
+    read()
+  }
+  function done (er) {
+    me.removeListener('drain', read)
+    stream.removeListener('end', done)
+    stream.removeListener('error', done)
+    stream.removeListener('readable', readable)
+    cb(er)
+  }
+  stream.on('end', done)
   stream.on('error', done)
-  stream.once('end', done)
+  stream.on('readable', readable)
+
+  read()
 }
 
 if (process.env.NODE_TEST) {

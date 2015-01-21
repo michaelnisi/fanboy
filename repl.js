@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 
-// repl - just a little REPL to play
+// repl - explore fanboy
 
 var fanboy = require('./')
 var levelup = require('levelup')
 var repl = require('repl')
-
-process.on('uncaughtException', console.error)
 
 var ctx = repl.start({
   prompt: 'fanboy> '

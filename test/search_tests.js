@@ -1,17 +1,10 @@
 
 var common = require('./common')
-  , fanboy = require('../')
-  , test = require('tap').test
-  ;
-
-var _server
-function server () {
-  return _server || (_server = common.server())
-}
+var fanboy = require('../')
+var test = require('tap').test
 
 test('setup', function (t) {
   common.setup(t)
-  server()
 })
 
 function opts (o) {
@@ -38,11 +31,11 @@ test('ECONNREFUSED', function (t) {
   common.test(t, fanboy.search(opts({port:9998})))
 })
 
-test('uninterrupted', function (t) {
+test('futile', function (t) {
   common.test(t, fanboy.search(opts()))
 })
 
-test('interrupted', function (t) {
+test('forbidden', function (t) {
   common.test(t, fanboy.search(opts()))
 })
 
@@ -81,19 +74,16 @@ test('not found', function (t) {
 })
 
 test('no results', function (t) {
-  t.plan(1)
   var db = common.db()
   var found = []
   var f = fanboy.search({ db:db })
-  f.on('error', function (er) {
-    t.is(er.message, 'no results')
+  f.on('end', function (er) {
     t.end()
   })
   f.end('xoxoxo')
+  f.resume()
 })
 
 test('teardown', function (t) {
-  server().close(function () {
-    common.teardown(t)
-  })
+  common.teardown(t)
 })

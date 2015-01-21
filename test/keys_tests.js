@@ -1,7 +1,6 @@
 
+var keys = require('../lib/keys')
 var test = require('tap').test
-  , keys = require('../lib/keys')
-  ;
 
 test('key', function (t) {
   var f = keys.key

@@ -59,7 +59,7 @@ The options for the **fanboy** cache:
 - `port` `Number` which defaults to `80`
 - `readableObjectMode` `Boolean` which defaults to `false`
 - `reduce` `function` which defaults to the `lib/reduce` module
-- `ttl` Time to live `Number` which defaults to `72 * 3600000`
+- `ttl` Time to live in milliseconds `Number` which defaults to `86400000`
 
 ## exports
 

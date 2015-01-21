@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "cache itunes search",
   "main": "index.js",
   "directories": {
@@ -8,12 +8,12 @@
     "test": "test"
   },
   "scripts": {
-    "test": "export NODE_TEST=1 ; tap --tap test/*.js"
+    "test": "export NODE_TEST=1 ; tap --tap test/*tests.js"
   },
   "dependencies": {
     "JSONStream": "^0.9.0",
     "gridlock": "^1.0.0",
-    "level-random": "^1.2.0",
+    "level-random": "^2.0.0",
     "lru-cache": "^2.5.0"
   },
   "devDependencies": {

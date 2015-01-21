@@ -1,9 +1,9 @@
 
-var test = require('tap').test
 var common = require('./common')
 var fanboy = require('../')
 var keys = require('../lib/keys')
 var string_decoder = require('string_decoder')
+var test = require('tap').test
 
 var _decoder = new string_decoder.StringDecoder('utf8')
 function decode (buf) {
@@ -35,48 +35,43 @@ function puts () {
 }
 
 test('no results', function (t) {
-  t.plan(1)
-  var db = common.db()
-  var found = []
-  var f = fanboy.suggest({ db:db })
-  f.on('error', function (er) {
-    t.is(er.message, 'no results')
+  var f = fanboy.suggest(common.opts())
+  var buf = ''
+  f.on('data', function (chunk) {
+    buf += chunk
+  })
+  f.on('end', function () {
+    var found = JSON.parse(decode(buf))
+    var wanted = []
+    t.deepEqual(found, wanted)
     t.end()
   })
   f.end('xoxoxo')
 })
 
 test('suggest', function (t) {
-  var db = common.db()
-    , found = []
-    ;
+  var opts = common.opts()
+  var db = opts.db
   db.batch(puts(), function (er) {
     t.ok(!er)
-    var f = fanboy.suggest({ db:db })
-    f.on('error', function (er) {
-      t.is(er.message, 'no results')
-    })
+    var buf = ''
+    var f = fanboy.suggest(opts)
     f.on('readable', function () {
       var chunk
       while (null !== (chunk = f.read())) {
-        found.push(decode(chunk))
+        buf += chunk
       }
     })
     f.write('a')
     f.write('ab')
     f.write('abc')
-    f.write('abcd')
-    f.once('finish', function () {
-      var wanted = [
-        '["abc"'
-      , ',"abc"'
-      , ',"abc"'
-      , ']\n'
-      ]
+    f.end('abcd')
+    f.on('end', function () {
+      var found = JSON.parse(decode(buf))
+      var wanted = ['abc', 'abc', 'abc']
       t.deepEqual(found, wanted)
       t.end()
     })
-    f.end()
   })
 })
 

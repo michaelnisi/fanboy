@@ -11,6 +11,8 @@ test('defaults', function (t) {
     cache: { get:fanboy.nop, set:fanboy.nop, reset:fanboy.nop }
   , country: 'us'
   , db: undefined
+  , encoding: undefined
+  , highWaterMark: undefined
   , hostname: 'itunes.apple.com'
   , locker: { lock:fanboy.nop, unlock:fanboy.nop }
   , max: 500
@@ -18,9 +20,9 @@ test('defaults', function (t) {
   , method: 'GET'
   , path: '/search'
   , port: 80
-  , readableObjectMode: false
+  , readableObjectMode: undefined
   , reduce: fanboy.reduce
-  , ttl: 259200000
+  , ttl: 86400000
   }
   t.deepEquals(f(), wanted)
   t.end()
@@ -49,7 +51,7 @@ test('FanboyTransform', function (t) {
   t.is(obj.path, '/search')
   t.is(typeof obj.reqOpts, 'function')
   t.is(typeof obj.request, 'function')
-  t.is(obj.ttl, 259200000)
+  t.is(obj.ttl, 86400000)
   t.is(typeof obj.reduce, 'function')
   t.is(obj.port, 80)
   t.is(obj.max, 500)
