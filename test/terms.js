@@ -1,5 +1,5 @@
 
-var common = require('./common')
+var common = require('./lib/common')
 var fanboy = require('../')
 var keys = require('../lib/keys')
 var string_decoder = require('string_decoder')

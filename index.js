@@ -299,6 +299,7 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
     unlock()
     req.removeListener('error', reqError)
     if (stale) return get()
+    me.deinit() // write more and we crash
     cb(er)
   }
   req.on('error', reqError)
@@ -462,14 +463,10 @@ function keyStream (db, term) {
   return db.createKeyStream(keys.range(keys.TRM, term))
 }
 
-function checkDB (db) {
-  var open = db._status === 'opening' || db._status === 'open'
-  if (!open) return new Error('database not open')
-}
-
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
-  var er = checkDB(this.db)
-  if (er) return cb(er)
+  if (this.db.isClosed()) {
+    return cb(new Error('database not open'))
+  }
   var term = this.decode(chunk).toLowerCase()
   var me = this
   var objectMode = this._readableState.objectMode

@@ -1,7 +1,6 @@
 
+var fanboy = require('../')
 var test = require('tap').test
-  , fanboy = require('../')
-  ;
 
 test('isStale', function (t) {
   var f = fanboy.isStale
@@ -23,6 +22,10 @@ test('debug', function (t) {
   t.end()
 })
 
+function str (o) {
+  return JSON.stringify(o)
+}
+
 test('termOp', function (t) {
   var keys = [
     'fnb\x00res\x0012'
@@ -33,7 +36,7 @@ test('termOp', function (t) {
   var wanted = [
     { type:'put'
     , key:'fnb\x00trm\x00abc'
-    , value:JSON.stringify([now].concat(keys))
+    , value:str([now].concat(keys))
     }
   ]
   t.plan(1)
@@ -58,10 +61,10 @@ test('putOps', function (t) {
   , 'fnb\x00res\x0056'
   ]
   var wanted = [
-    { type:'put', key:keys[0], value:JSON.stringify(results[0]) }
-  , { type:'put', key:keys[1], value:JSON.stringify(results[1]) }
-  , { type:'put', key:keys[2], value:JSON.stringify(results[2]) }
-  , { type:'put', key:'fnb\x00trm\x00abc', value:JSON.stringify([now].concat(keys))}
+    { type:'put', key:keys[0], value:str(results[0]) }
+  , { type:'put', key:keys[1], value:str(results[1]) }
+  , { type:'put', key:keys[2], value:str(results[2]) }
+  , { type:'put', key:'fnb\x00trm\x00abc', value:str([now].concat(keys))}
   ]
   var found = fanboy.putOps('abc', results, now)
   t.plan(1)

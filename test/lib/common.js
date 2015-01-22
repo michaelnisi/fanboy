@@ -130,8 +130,15 @@ function router () {
   return _router || (_router = routes())
 }
 
+function deinited (t, f) {
+  t.is(f.db, null)
+  t.is(f.cache, null)
+  t.is(f.locker, null)
+  t.is(f.reduce, null)
+}
+
 function empty (t, f) {
-  t.plan(1)
+  t.plan(5)
   var found
   var wanted = '[]\n'
   f.on('readable', function () {
@@ -139,15 +146,17 @@ function empty (t, f) {
   })
   f.on('end', function () {
     t.is(found, wanted)
+    deinited(t, f)
     t.end()
   })
 }
 
 var _tests = {
   'ENOTFOUND': function (t, f) {
-    t.plan(1)
+    t.plan(5)
     f.on('error', function (er) {
       t.ok(er, 'should error')
+      deinited(t, f)
       t.end()
     })
     f.end('abc')
@@ -165,9 +174,10 @@ var _tests = {
     f.end('surprise')
   }
 , 'ECONNREFUSED': function (t, f) {
-    t.plan(1)
+    t.plan(5)
     f.on('error', function (er) {
       t.ok(er, 'should error')
+      deinited(t, f)
       t.end()
     })
     f.end('abc')
@@ -182,10 +192,11 @@ var _tests = {
     })
     f.end('futile', function () {
       var results = JSON.parse(buf)
-      t.plan(2)
+      t.plan(6)
       results.map(function (result) {
         t.ok(result.guid)
       })
+      deinited(t, f)
       t.end()
     })
   }

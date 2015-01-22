@@ -1,5 +1,5 @@
 
-var common = require('./common')
+var common = require('./lib/common')
 var fanboy = require('../')
 var test = require('tap').test
 

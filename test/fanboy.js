@@ -1,7 +1,6 @@
 
+var fanboy = require('../')
 var test = require('tap').test
-  , fanboy = require('../')
-  ;
 
 test('defaults', function (t) {
   var f = fanboy.defaults
