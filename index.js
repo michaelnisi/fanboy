@@ -14,7 +14,7 @@ var lr = require('level-random')
 var lru = require('lru-cache')
 var querystring = require('querystring')
 var reduce = require('./lib/reduce')
-var stream = require('stream')
+var stream = require('readable-stream')
 var string_decoder = require('string_decoder')
 var url = require('url')
 var util = require('util')
@@ -83,7 +83,7 @@ function FanboyTransform (opts) {
 }
 
 FanboyTransform.prototype.decode = function (chunk) {
-  return this.decoder.write(chunk)
+  return this.decoder.write(chunk).toLowerCase()
 }
 
 var TOKENS = ['[', ',', ']\n']
@@ -127,21 +127,17 @@ function Bulk (type, key, value) {
   this.value = value
 }
 
-function termKey (term) {
-  return keys.key(keys.TRM, term)
-}
-
-function termOp (term, keys, now) {
+function termOp (term, kees, now) {
   now = now || Date.now()
-  var k = termKey(term)
-  var v = JSON.stringify([now].concat(keys))
+  var k = keys.termKey(term)
+  var v = JSON.stringify([now].concat(kees))
   return new Bulk('put', k, v)
 }
 
 function resOp (result, now) {
   now = now || Date.now()
   result.ts = now
-  var k = resKey(result.guid)
+  var k = keys.resKey(result.guid)
   var v = JSON.stringify(result)
   return new Bulk('put', k, v)
 }
@@ -164,6 +160,10 @@ function put (db, term, results, cb) {
   } else {
     cb(new Error('I will not store empty results'))
   }
+}
+
+function del (db, term, cb) {
+  db.del(keys.termKey(term), cb)
 }
 
 var verbs = { '/search':'term', '/lookup':'id' }
@@ -282,13 +282,17 @@ FanboyTransform.prototype.request = function (term, stale, cb) {
     function resEnd (chunk) {
       if (results.length) {
         put(db, term, results, function (er) {
-          results = null
+          done(er || error)
+        })
+      } else if (!error) {
+        del(db, term, function (er) {
+          me.cache.set(term, true)
           done(er)
         })
       } else {
-        me.cache.set(term, true)
-        done(error)
+        done()
       }
+      results = null
     }
     res.once('error', done)
     res.on('end', resEnd)
@@ -320,16 +324,12 @@ function Lookup (opts) {
   FanboyTransform.call(this, opts)
 }
 
-function resKey (id) {
-  return keys.key(keys.RES, id)
-}
-
 // The result as JSON string
 // - db levelup()
 // - id the iTunes ID
 // - cb cb(er, value)
 function resultForID (db, id, cb) {
-  var key = resKey(id)
+  var key = keys.resKey(id)
   db.get(key, function (er, value) {
     cb(er, value)
   })
@@ -364,7 +364,7 @@ function isStale (time, ttl) {
 
 Search.prototype.keysForTerm = function (term, cb) {
   var ttl = this.ttl
-  this.db.get(termKey(term), function (er, value) {
+  this.db.get(keys.termKey(term), function (er, value) {
     var keys
     if (!er && !!value) {
       try {
@@ -460,14 +460,14 @@ function SearchTerms (opts) {
 }
 
 function keyStream (db, term) {
-  return db.createKeyStream(keys.range(keys.TRM, term))
+  return db.createKeyStream(keys.rangeForTerm(term))
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
   if (this.db.isClosed()) {
     return cb(new Error('database not open'))
   }
-  var term = this.decode(chunk).toLowerCase()
+  var term = this.decode(chunk)
   var me = this
   var objectMode = this._readableState.objectMode
   var ok = false
@@ -476,7 +476,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     var key
     var term
     while (null !== (key = stream.read())) {
-      term = key.split(keys.DIV)[2]
+      term = keys.termFromKey(key)
       if (!me.use('"' + term + '"')) {
         me.once('drain', read)
         break

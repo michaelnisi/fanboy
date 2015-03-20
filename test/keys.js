@@ -2,6 +2,9 @@
 var keys = require('../lib/keys')
 var test = require('tap').test
 
+var DIV = '\udbff\udfff'
+var END = '\xff'
+
 test('key', function (t) {
   var f = keys.key
   t.plan(6)
@@ -10,8 +13,8 @@ test('key', function (t) {
   t.throws(function () { f('WTF') })
   t.throws(function () { f('WTF', 'thing') })
   var wanted = [
-    'fnb\x00trm\x00abc'
-  , 'fnb\x00res\x00123'
+    ['fnb', 'trm', 'abc'].join(DIV)
+  , ['fnb', 'res', '123'].join(DIV)
   ]
   ;[
     f(keys.TRM, 'abc')
@@ -26,8 +29,12 @@ test('range', function (t) {
   var f = keys.range
   t.plan(2)
   var wanted = [
-    { start:'fnb\x00trm\x00abc', end:'fnb\x00trm\x00abcÿ', limit:10 }
-  , { start: 'fnb\x00res\x00123', end:'fnb\x00res\x00123ÿ', limit:10 }
+    { start:['fnb', 'trm', 'abc'].join(DIV)
+    , end:['fnb', 'trm', 'abc'].join(DIV) + END
+    , limit:50 }
+  , { start: ['fnb', 'res', '123'].join(DIV)
+    , end:['fnb', 'res', '123'].join(DIV) + END
+    , limit:50 }
   ]
   ;[
     f(keys.TRM, 'abc')
@@ -40,13 +47,14 @@ test('range', function (t) {
 
 test('trim', function (t) {
   var f = keys.trim
-  t.plan(5)
   var wanted = [
     'abc'
   , 'abc'
   , 'abc'
   , 'abc def'
   , 'abc def'
+  , '123'
+  , 'abc'
   ]
   ;[
     f('abc')
@@ -54,6 +62,8 @@ test('trim', function (t) {
   , f(' abc ')
   , f(' abc def ')
   , f(' abc  def ')
+  , f(123)
+  , f(new Buffer('abc'))
   ].forEach(function (found, i) {
     t.deepEqual(found, wanted[i])
   })
