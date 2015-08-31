@@ -1,18 +1,49 @@
-
 # fanboy - cache itunes search
 
-The **fanboy** [Node.js](http://nodejs.org/) package implements a cache for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-cache-web-service-search-api.html).
+The **fanboy** [Node.js](http://nodejs.org/) package implements a cache for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
 
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
 
-## Usage
+## Types
+
+### void()
+
+Compound type representing `undefined` or `null`.
+
+### opts()
+
+The options for the **fanboy** cache:
+
+- `country` `String` Country code of the store to search (`'us'`).
+- `highWaterMark` `Number` Passed to `stream.Readable` constructor.
+- `hostname` `String` The host name of the store (`'itunes.apple.com'`).
+- `media` `String` The media type to search for (`'all'`).
+- `objectMode` `Boolean` Whether this stream should behave as a stream of objects (`false`).
+- `path` `String` The path to the store (`/search`).
+- `port` `Number` The port to access the store (`80`).
+- `reduce` `function` Applied to each result (`lib/reduce`).
+- `ttl` `Number` Time to live in hours (`24`).
+
+## Exports
+
+The **fanboy** module exports a single function that returns a new cache object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`.
+
+### Creating a new cache
+
+`fanboy(name, opts)`
+
+- `name` `String()` The name of the file system directory for the database.
+- `opts` `opts() | void()` Optional parameters of the cache.
 
 ```js
 var fanboy = require('fanboy')
-var levelup = require('levelup')
 
-var cache = fanboy({media:'podcast', db:levelup('/tmp/fanboy')})
+var cache = fanboy('/tmp/fanboy.db', {
+  type: 'podcast'
+})
 ```
+
+### Searching the cache
 
 ```js
 var search = cache.search()
@@ -20,9 +51,15 @@ search.end('merlin mann')
 search.pipe(process.stdout)
 ```
 
+To run this printing only the title(s), do:
+
 ```
-$ node example/search.js | json
+$ node example/search | json -ga title
 ```
+
+This will search remotely and cache the result, subsequent requests will use the cache.
+
+### Looking up a guid
 
 ```js
 var lookup = cache.lookup()
@@ -30,9 +67,13 @@ lookup.end('471418144')
 lookup.pipe(process.stdout)
 ```
 
+You can run this with:
+
 ```
-$ node example/lookup.js | json
+$ node example/lookup | json
 ```
+
+### Getting suggestions for search terms
 
 ```js
 var suggest = cache.suggest()
@@ -40,47 +81,13 @@ suggest.end('m')
 suggest.pipe(process.stdout)
 ```
 
+Try:
+
 ```
-$ node example/suggest.js | json
-```
-
-## types
-
-### opts()
-
-The options for the **fanboy** cache:
-
-- `country` `String` which defaults to `'us'`
-- `db` The mandatory [LevelUP](https://github.com/rvagg/node-levelup) instance
-- `hostname` `String` which defaults to `'itunes.apple.com'`
-- `media` `String` which defaults to `'all'`
-- `method` `String` which defaults to `'GET'`
-- `path` `String` which defautls to `'/search'`
-- `port` `Number` which defaults to `80`
-- `readableObjectMode` `Boolean` which defaults to `false`
-- `reduce` `function` which defaults to the `lib/reduce` module
-- `ttl` Time to live in milliseconds `Number` which defaults to `86400000`
-
-## exports
-
-The **fanboy** module exports a single function that returns a new cache object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`.
-
-```js
-var fanboy = require('fanboy')
-var cache = fanboy(opts())
+$ node example/suggest | json
 ```
 
-### cache.search()
-
-[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform)  stream where input is search terms as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
-
-### cache.lookup()
-
-[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is guids as `String` or `Buffer` and output is search results as JSON `Buffer` or `Object`.
-
-### cache.suggest()
-
-[Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform) stream where input is search terms as `String` or `Buffer` and output is search terms as JSON `Buffer` or `String`.
+If you have not searched before doing this, you will not get any results, because the suggestions index is populated as we are caching data.
 
 ## Installation
 

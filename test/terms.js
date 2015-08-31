@@ -1,18 +1,13 @@
-
 var common = require('./lib/common')
-var fanboy = require('../')
 var keys = require('../lib/keys')
 var string_decoder = require('string_decoder')
 var test = require('tap').test
 
-var _decoder = new string_decoder.StringDecoder('utf8')
-function decode (buf) {
-  return _decoder.write(buf)
-}
+var decoder = new string_decoder.StringDecoder('utf8')
 
-test('setup', function (t) {
-  common.setup(t)
-})
+function decode (buf) {
+  return decoder.write(buf)
+}
 
 function key (term) {
   return keys.key(keys.TRM, term)
@@ -23,7 +18,7 @@ function terms () {
 }
 
 function put (term) {
-  return { type:'put', key:key(term), value:term.toUpperCase() }
+  return { type: 'put', key: key(term), value: term.toUpperCase() }
 }
 
 function puts () {
@@ -35,7 +30,9 @@ function puts () {
 }
 
 test('no results', function (t) {
-  var f = fanboy.suggest(common.opts())
+  t.plan(2)
+  var cache = common.freshCache()
+  var f = cache.suggest()
   var buf = ''
   f.on('data', function (chunk) {
     buf += chunk
@@ -44,21 +41,24 @@ test('no results', function (t) {
     var found = JSON.parse(decode(buf))
     var wanted = []
     t.deepEqual(found, wanted)
-    t.end()
+    common.teardown(cache, function () {
+      t.pass('should teardown')
+    })
   })
   f.end('xoxoxo')
 })
 
 test('suggest', function (t) {
-  var opts = common.opts()
-  var db = opts.db
+  var cache = common.freshCache()
+  var db = cache.db
+  t.plan(3)
   db.batch(puts(), function (er) {
     t.ok(!er)
     var buf = ''
-    var f = fanboy.suggest(opts)
+    var f = cache.suggest()
     f.on('readable', function () {
       var chunk
-      while (null !== (chunk = f.read())) {
+      while ((chunk = f.read()) !== null) {
         buf += chunk
       }
     })
@@ -70,11 +70,9 @@ test('suggest', function (t) {
       var found = JSON.parse(decode(buf))
       var wanted = ['abc', 'abc', 'abc']
       t.deepEqual(found, wanted)
-      t.end()
+      common.teardown(cache, function () {
+        t.pass('should teardown')
+      })
     })
   })
-})
-
-test('teardown', function (t) {
-  common.teardown(t)
 })

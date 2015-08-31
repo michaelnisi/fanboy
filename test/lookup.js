@@ -1,61 +1,27 @@
-
 var common = require('./lib/common')
-var fanboy = require('../')
+var fs = require('fs')
+var nock = require('nock')
+var path = require('path')
 var test = require('tap').test
 
-test('setup', function (t) {
-  common.setup(t)
-})
-
-function opts (o) {
-  return common.opts(o)
-}
-
-test('forbidden', function (t) {
-  common.test(t, fanboy.lookup(opts()))
-})
-
-test('lie', function (t) {
-  common.test(t, fanboy.lookup(opts()))
-})
-
-test('surprise', function (t) {
-  common.test(t, fanboy.lookup(opts()))
-})
-
-test('ENOTFOUND', function (t) {
-  common.test(t, fanboy.lookup(opts({ hostname:'chaos'})))
-})
-
-test('ECONNREFUSED', function (t) {
-  common.test(t, fanboy.lookup(opts({port:9998})))
-})
-
-test('ENOTJSON', function (t) {
-  common.test(t, fanboy.lookup(opts()))
-})
-
-test('futile', function (t) {
-  common.test(t, fanboy.lookup(opts()))
-})
-
-test('stutter', function (t) {
-  common.test(t, fanboy.lookup(opts()))
-})
-
 test('simple', function (t) {
-  var f = fanboy.lookup(common.opts())
+  t.plan(4)
+  var scope = nock('http://itunes.apple.com')
+    .get('/lookup?media=podcast&country=us&id=537879700')
+    .reply(200, function (uri, body) {
+    t.comment(uri)
+    var p = path.join(__dirname, 'data', '537879700.json')
+    return fs.createReadStream(p)
+  })
+  var cache = common.freshCache()
+  var f = cache.lookup()
   f.write('537879700')
   f.end()
   var buf = ''
-  f.on('readable', function () {
-    var chunk
-    while (null !== (chunk = f.read())) {
-      buf += chunk
-    }
+  f.on('data', function (chunk) {
+    buf += chunk
   })
-  t.plan(2)
-  f.on('finish', function () {
+  f.on('end', function () {
     var items = JSON.parse(buf)
     t.is(items.length, 1)
     var found = items[0]
@@ -70,11 +36,10 @@ test('simple', function (t) {
       title: 'Seminargespräche',
       updated: 1389090240000
     }
-    t.deepEqual(found, wanted)
-    t.end()
+    t.same(found, wanted)
+    t.ok(scope.isDone())
+    common.teardown(cache, function () {
+      t.pass('should teardown')
+    })
   })
-})
-
-test('teardown', function (t) {
-  common.teardown(t)
 })

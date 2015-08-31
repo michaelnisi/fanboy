@@ -1,4 +1,3 @@
-
 var fanboy = require('../')
 var test = require('tap').test
 
@@ -7,21 +6,19 @@ test('defaults', function (t) {
   t.plan(2)
   t.ok(!!f())
   var wanted = {
-    cache: { get:fanboy.nop, set:fanboy.nop, reset:fanboy.nop }
-  , country: 'us'
-  , db: undefined
-  , encoding: undefined
-  , highWaterMark: undefined
-  , hostname: 'itunes.apple.com'
-  , locker: { lock:fanboy.nop, unlock:fanboy.nop }
-  , max: 500
-  , media: 'all'
-  , method: 'GET'
-  , path: '/search'
-  , port: 80
-  , readableObjectMode: undefined
-  , reduce: fanboy.reduce
-  , ttl: 86400000
+    cache: { get: fanboy.nop, set: fanboy.nop, reset: fanboy.nop },
+    country: 'us',
+    highWaterMark: undefined,
+    hostname: 'itunes.apple.com',
+    locker: { lock: fanboy.nop, unlock: fanboy.nop },
+    max: 500,
+    media: 'all',
+    method: 'GET',
+    objectMode: false,
+    path: '/search',
+    port: 80,
+    reduce: fanboy.reduce,
+    ttl: 86400000
   }
   t.deepEquals(f(), wanted)
   t.end()

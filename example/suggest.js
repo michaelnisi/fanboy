@@ -1,7 +1,9 @@
-
-var opts = require('./opts')
 var fanboy = require('../')
 
-var suggest = fanboy(opts()).suggest()
+var cache = fanboy('/tmp/fanboy.db', {
+  type: 'podcast'
+})
+
+var suggest = cache.suggest()
 suggest.end('m')
 suggest.pipe(process.stdout)

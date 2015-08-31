@@ -1,8 +1,9 @@
+var fanboy = require('../')
 
-var opts = require('./opts')
-  , fanboy = require('../')
-  ;
+var cache = fanboy('/tmp/fanboy.db', {
+  type: 'podcast'
+})
 
-var lookup = fanboy(opts()).lookup()
+var lookup = cache.lookup()
 lookup.end('471418144')
 lookup.pipe(process.stdout)
