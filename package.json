@@ -8,7 +8,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "NODE_TEST=1 tap -b test/*.js",
+    "test": "NODE_TEST=1 tap -b -C test/*.js",
     "posttest": "rm -rf /tmp/fanboy-[1-9]*"
   },
   "dependencies": {
