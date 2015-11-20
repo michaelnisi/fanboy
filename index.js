@@ -3,6 +3,7 @@
 exports = module.exports = Fanboy
 
 var JSONStream = require('JSONStream')
+var events = require('events')
 var gridlock = require('gridlock')
 var http = require('http')
 var https = require('https')
@@ -18,16 +19,19 @@ var util = require('util')
 
 function nop () {}
 
+var debugging = parseInt(process.env.NODE_DEBUG, 10) === 1
 var debug = (function () {
-  return parseInt(process.env.NODE_DEBUG, 10) === 1 ?
-    function (o) {
-      console.error('** fanboy: %s', util.inspect(o))
-    } : nop
+  return debugging ? function (o) {
+    console.error('** fanboy: %s', util.inspect(o))
+  } : nop
 })()
+
+var testing = parseInt(process.env.NODE_TEST, 10) === 1
 
 function Opts (opts) {
   opts = opts || Object.create(null)
   this.cache = opts.cache || { set: nop, get: nop, reset: nop }
+  this.cacheSize = opts.cacheSize
   this.country = opts.country || 'us'
   this.highWaterMark = opts.highWaterMark
   this.hostname = opts.hostname || 'itunes.apple.com'
@@ -39,7 +43,7 @@ function Opts (opts) {
   this.path = opts.path || '/search'
   this.port = opts.port || 80
   this.reduce = opts.reduce || reduce
-  this.ttl = opts.ttl || 24 * 60 * 60 * 1000
+  this.ttl = opts.ttl || 24 * 3600 * 1000
 }
 
 function defaults (opts) {
@@ -54,11 +58,15 @@ function sharedState (opts) {
 
 function Fanboy (name, opts) {
   if (!(this instanceof Fanboy)) return new Fanboy(name, opts)
-  this.db = levelup(name)
+  events.EventEmitter.call(this)
   opts = defaults(opts)
+  this.db = levelup(name, {
+    cacheSize: opts.cacheSize
+  })
   opts = sharedState(opts)
   this.opts = opts
 }
+util.inherits(Fanboy, events.EventEmitter)
 
 Fanboy.prototype.search = function () {
   return new Search(this.db, this.opts)
@@ -70,6 +78,12 @@ Fanboy.prototype.lookup = function () {
 
 Fanboy.prototype.suggest = function () {
   return new SearchTerms(this.db, this.opts)
+}
+
+if (testing) {
+  Fanboy.prototype.close = function (cb) {
+    this.db.close(cb)
+  }
 }
 
 function TransformOpts (highWaterMark) {
@@ -193,11 +207,12 @@ function mkpath (path, term, media, country) {
   return [path, q].join('?')
 }
 
-function ReqOpts (hostname, port, method, path) {
+function ReqOpts (hostname, keepAlive, port, method, path) {
   this.hostname = hostname
-  this.port = port
+  this.keepAlive = keepAlive
   this.method = method
   this.path = path
+  this.port = port
 }
 
 // HTTP request options
@@ -205,7 +220,7 @@ function ReqOpts (hostname, port, method, path) {
 FanboyTransform.prototype.reqOpts = function (term) {
   term = term || this.term
   var p = mkpath(this.path, term, this.media, this.country)
-  return new ReqOpts(this.hostname, this.port, this.method, p)
+  return new ReqOpts(this.hostname, true, this.port, this.method, p)
 }
 
 // JSONStream is objectionable.
@@ -338,7 +353,6 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     cb(er)
   }
   req.on('error', onerror)
-  req.setSocketKeepAlive(true)
   req.end()
 }
 
@@ -370,11 +384,14 @@ function resultForID (db, id, cb) {
 Lookup.prototype._transform = function (chunk, enc, cb) {
   var me = this
   var db = this.db
-  var id = this.decode(chunk)
-  resultForID(db, id, function (er, value) {
+  var guid = this.decode(chunk)
+  if (!parseInt(guid, 10)) {
+    return cb(new Error('fanboy: guid ' + guid + ' is not a number'))
+  }
+  resultForID(db, guid, function (er, value) {
     if (er) {
       if (er.notFound) {
-        return me.request(id, cb)
+        return me.request(guid, cb)
       }
     } else if (value !== undefined) {
       me.use(value)
@@ -546,7 +563,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
   reader.on('readable', read)
 }
 
-if (process.env.NODE_TEST) {
+if (testing) {
   exports.base = FanboyTransform
   exports.debug = debug
   exports.defaults = defaults

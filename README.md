@@ -10,19 +10,35 @@ The **fanboy** [Node.js](http://nodejs.org/) package implements a cache for part
 
 Compound type representing `undefined` or `null`.
 
+### reduce()
+
+A `function` applied to each [iTunes search result](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html#understand). The default `lib/reduce.js`—for podcasts—produces:
+
+- `author` `String()`
+- `feed` `String()`
+- `guid` `Number()`
+- `img100` `String()`
+- `img30` `String()`
+- `img60` `String()`
+- `img600` `String()`
+- `title` `String()`
+- `updated` `Number()`
+- `ts` `Number()`
+
 ### opts()
 
 The options for the **fanboy** cache:
 
-- `country` `String` Country code of the store to search (`'us'`).
+- `cacheSize` `Number` The cache size passed to [`levelup`](https://github.com/Level/levelup).
+- `country` `String` The country code for the search API—defaults to 'us'.
 - `highWaterMark` `Number` Passed to `stream.Readable` constructor.
 - `hostname` `String` The host name of the store (`'itunes.apple.com'`).
 - `media` `String` The media type to search for (`'all'`).
 - `objectMode` `Boolean` Whether this stream should behave as a stream of objects (`false`).
 - `path` `String` The path to the store (`/search`).
 - `port` `Number` The port to access the store (`80`).
-- `reduce` `function` Applied to each result (`lib/reduce`).
-- `ttl` `Number` Time to live in hours (`24`).
+- `reduce` `reduce()`
+- `ttl` `Number` Time to live in milliseconds (`24 * 3600 * 1000`).
 
 ## Exports
 

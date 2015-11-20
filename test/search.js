@@ -23,7 +23,9 @@ test('flowing mode', { skip: false }, function (t) {
   assert(f.locker)
   var buf = ''
   f.end('gruber')
-  f.on('data', function (chunk) { buf += chunk })
+  f.on('data', function (chunk) {
+    buf += chunk
+  })
   f.on('end', function () {
     var items = JSON.parse(buf)
     t.is(items.length, 13)
@@ -76,8 +78,8 @@ test('no results', { skip: false }, function (t) {
   var scope = nock('http://itunes.apple.com')
     .get('/search?media=podcast&country=us&term=xoxoxo')
     .reply(200, function (uri, body) {
-    return ''
-  })
+      return ''
+    })
   var cache = common.freshCache()
   var f = cache.search()
   var buf = ''

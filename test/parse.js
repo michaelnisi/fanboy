@@ -30,9 +30,9 @@ test('basics', { skip: false }, function (t) {
 })
 
 test('not json', { skip: false }, function (t) {
-  t.plan(9)
   var readable = stread('why hello')
   var s = parse(readable)
+  t.plan(2)
   s.on('error', function (er) {
     t.ok(er)
   })

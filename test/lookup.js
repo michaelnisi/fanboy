@@ -4,15 +4,30 @@ var nock = require('nock')
 var path = require('path')
 var test = require('tap').test
 
+test('invalid guid', function (t) {
+  t.plan(2)
+  var cache = common.freshCache()
+  var f = cache.lookup()
+  f.on('error', function (er) {
+    t.is(er.message, 'fanboy: guid x is not a number')
+  })
+  f.on('end', function () {
+    t.pass('should end')
+  })
+  f.write('x')
+  f.end()
+  f.resume()
+})
+
 test('simple', function (t) {
   t.plan(4)
   var scope = nock('http://itunes.apple.com')
     .get('/lookup?media=podcast&country=us&id=537879700')
     .reply(200, function (uri, body) {
-    t.comment(uri)
-    var p = path.join(__dirname, 'data', '537879700.json')
-    return fs.createReadStream(p)
-  })
+      t.comment(uri)
+      var p = path.join(__dirname, 'data', '537879700.json')
+      return fs.createReadStream(p)
+    })
   var cache = common.freshCache()
   var f = cache.lookup()
   f.write('537879700')
