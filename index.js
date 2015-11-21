@@ -199,7 +199,7 @@ function decorate (obj, path, term) {
 }
 
 function mkpath (path, term, media, country) {
-  var obj = {
+  var obj = path === '/lookup' ? Object.create(null) : {
     media: media,
     country: country
   }

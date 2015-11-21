@@ -22,7 +22,7 @@ test('invalid guid', function (t) {
 test('simple', function (t) {
   t.plan(4)
   var scope = nock('http://itunes.apple.com')
-    .get('/lookup?media=podcast&country=us&id=537879700')
+    .get('/lookup?id=537879700')
     .reply(200, function (uri, body) {
       t.comment(uri)
       var p = path.join(__dirname, 'data', '537879700.json')
