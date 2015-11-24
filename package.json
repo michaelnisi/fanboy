@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "JSONStream": "^1.0.6",
-    "gridlock": "^1.0.0",
     "level-random": "^2.0.0",
     "leveldown": "^1.4.2",
     "levelup": "^1.3.0",

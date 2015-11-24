@@ -11,7 +11,6 @@ test('defaults', function (t) {
     country: 'us',
     highWaterMark: undefined,
     hostname: 'itunes.apple.com',
-    locker: { lock: fanboy.nop, unlock: fanboy.nop },
     max: 500,
     media: 'all',
     method: 'GET',

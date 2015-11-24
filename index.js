@@ -4,7 +4,6 @@ exports = module.exports = Fanboy
 
 var JSONStream = require('JSONStream')
 var events = require('events')
-var gridlock = require('gridlock')
 var http = require('http')
 var https = require('https')
 var keys = require('./lib/keys')
@@ -35,7 +34,6 @@ function Opts (opts) {
   this.country = opts.country || 'us'
   this.highWaterMark = opts.highWaterMark
   this.hostname = opts.hostname || 'itunes.apple.com'
-  this.locker = opts.locker || { lock: nop, unlock: nop }
   this.max = opts.max || 500
   this.media = opts.media || 'all'
   this.method = opts.method || 'GET'
@@ -51,7 +49,6 @@ function defaults (opts) {
 }
 
 function sharedState (opts) {
-  opts.locker = gridlock()
   opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
   return opts
 }
@@ -133,7 +130,6 @@ FanboyTransform.prototype.use = function (chunk) {
 FanboyTransform.prototype.deinit = function () {
   this.cache = null
   this.db = null
-  this.locker = null
   this.reduce = null
 }
 
@@ -249,13 +245,15 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     keys = null
   }
   var me = this
-  function cached () {
-    return me.cache.get(term)
+  function skip () {
+    return me.cache.has(term)
   }
-  if (cached()) return cb()
+  if (skip()) return cb()
+
   var opts = this.reqOpts(term)
-  function get () {
-    if (cached()) return cb()
+
+  function fallback () {
+    if (skip()) return cb()
     if (keys) {
       return me.resultsForKeys(keys, cb)
     }
@@ -266,20 +264,12 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       me.resultsForKeys(keys, cb)
     })
   }
-  var lock = opts.path
-  function unlock () {
-    me.locker.unlock(lock)
-  }
-  if (this.locker.lock(lock)) {
-    return me.locker.once(lock, get)
-  }
-  // Make the request already!
+
   var mod = opts.port === 443 ? https : http
   var req = mod.request(opts, function (res) {
     var statusCode = res.statusCode
     if (statusCode !== 200) {
       res.once('end', function () {
-        unlock()
         var er = new Error('fanboy: unexpected response ' + statusCode)
         er.statusCode = statusCode
         er.headers = res.headers
@@ -340,19 +330,24 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     parser.on('end', onend)
     parser.on('error', onerror)
   })
-  function onerror (error) {
-    unlock()
-    req.removeListener('error', onerror)
+  function onRequestError (error) {
+    req.removeListener('error', onRequestError)
     var er = util._extend(new Error(), error)
     er.message = 'fanboy: ' + error.message
     if (keys) {
-      er.message = 'fanboy: fell back on cache ' + er.code
+      er.message = 'fanboy: falling back on cache ' + er.code
       me.emit('error', er)
-      return get()
+      return fallback()
     }
     cb(er)
   }
-  req.on('error', onerror)
+  function onRequestEnd () {
+    req.removeListener('error', onRequestError)
+    req.removeListener('end', onRequestEnd)
+    req = null
+  }
+  req.on('error', onRequestError)
+  req.on('end', onRequestEnd)
   req.end()
 }
 

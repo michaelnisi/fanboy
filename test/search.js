@@ -3,7 +3,6 @@ var fs = require('fs')
 var nock = require('nock')
 var path = require('path')
 var test = require('tap').test
-var assert = require('assert')
 
 function stream (scope, term) {
   scope.get('/search?media=podcast&country=us&term=' + term).reply(200,
@@ -20,7 +19,6 @@ test('flowing mode', { skip: false }, function (t) {
   stream(scope, 'gruber')
   var cache = common.freshCache()
   var f = cache.search()
-  assert(f.locker)
   var buf = ''
   f.end('gruber')
   f.on('data', function (chunk) {
