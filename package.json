@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "Cache iTunes search",
   "main": "index.js",
   "directories": {
