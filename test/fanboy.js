@@ -7,9 +7,9 @@ test('defaults', function (t) {
   t.ok(!!f())
   var wanted = {
     cache: { get: fanboy.nop, set: fanboy.nop, reset: fanboy.nop },
-    cacheSize: null,
+    cacheSize: 8388608,
     country: 'us',
-    highWaterMark: undefined,
+    highWaterMark: 16,
     hostname: 'itunes.apple.com',
     max: 500,
     media: 'all',

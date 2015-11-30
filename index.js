@@ -30,9 +30,9 @@ var testing = parseInt(process.env.NODE_TEST, 10) === 1
 function Opts (opts) {
   opts = opts || Object.create(null)
   this.cache = opts.cache || { set: nop, get: nop, reset: nop }
-  this.cacheSize = opts.cacheSize
+  this.cacheSize = opts.cacheSize || 8 * 1024 * 1024
   this.country = opts.country || 'us'
-  this.highWaterMark = opts.highWaterMark
+  this.highWaterMark = opts.highWaterMark || 16
   this.hostname = opts.hostname || 'itunes.apple.com'
   this.max = opts.max || 500
   this.media = opts.media || 'all'
@@ -65,16 +65,28 @@ function Fanboy (name, opts) {
 }
 util.inherits(Fanboy, events.EventEmitter)
 
-Fanboy.prototype.search = function () {
-  return new Search(this.db, this.opts)
+function overrideStreamOpts (a, b) {
+  if (!a) return b
+  var opts = util._extend(Object.create(null), b)
+  opts.highWaterMark = a.highWaterMark
+  opts.encoding = a.encoding
+  opts.objectMode = a.objectMode
+  return opts
 }
 
-Fanboy.prototype.lookup = function () {
-  return new Lookup(this.db, this.opts)
+Fanboy.prototype.search = function (opts) {
+  var o = overrideStreamOpts(opts, this.opts)
+  return new Search(this.db, o)
 }
 
-Fanboy.prototype.suggest = function () {
-  return new SearchTerms(this.db, this.opts)
+Fanboy.prototype.lookup = function (opts) {
+  var o = overrideStreamOpts(opts, this.opts)
+  return new Lookup(this.db, o)
+}
+
+Fanboy.prototype.suggest = function (opts) {
+  var o = overrideStreamOpts(opts, this.opts)
+  return new SearchTerms(this.db, o)
 }
 
 if (testing) {
@@ -248,7 +260,9 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   function skip () {
     return me.cache.has(term)
   }
-  if (skip()) return cb()
+  if (skip()) {
+    return cb()
+  }
 
   var opts = this.reqOpts(term)
 
@@ -565,6 +579,7 @@ if (testing) {
   exports.isStale = isStale
   exports.lookup = Lookup
   exports.nop = nop
+  exports.overrideStreamOpts = overrideStreamOpts
   exports.parse = parse
   exports.putOps = putOps
   exports.reduce = reduce

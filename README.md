@@ -105,6 +105,10 @@ $ node example/suggest | json
 
 If you have not searched before doing this, you will not get any results, because the suggestions index is populated as we are caching data.
 
+### Overriding stream options
+
+The `search`, `lookup`, and `suggest` functions accept an optional stream options `Object` that lets you override global stream options—`highWaterMark`, `encoding`, and `objectMode`—of your `fanboy` instance.
+
 ## Installation
 
 With [npm](https://npmjs.org/package/fanboy) do:
