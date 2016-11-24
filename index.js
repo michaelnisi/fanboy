@@ -2,30 +2,25 @@
 
 exports = module.exports = Fanboy
 
-var JSONStream = require('JSONStream')
-var events = require('events')
-var http = require('http')
-var https = require('https')
-var keys = require('./lib/keys')
-var levelup = require('levelup')
-var lr = require('level-random')
-var lru = require('lru-cache')
-var querystring = require('querystring')
-var reduce = require('./lib/reduce')
-var stream = require('readable-stream')
-var string_decoder = require('string_decoder')
-var util = require('util')
+const JSONStream = require('JSONStream')
+const events = require('events')
+const http = require('http')
+const https = require('https')
+const keys = require('./lib/keys')
+const levelup = require('levelup')
+const lr = require('level-random')
+const lru = require('lru-cache')
+const querystring = require('querystring')
+const reduce = require('./lib/reduce')
+const stream = require('readable-stream')
+const string_decoder = require('string_decoder')
+const util = require('util')
+
+const debug = util.debuglog('fanboy')
 
 function nop () {}
 
-var debugging = parseInt(process.env.NODE_DEBUG, 10) === 1
-var debug = (function () {
-  return debugging ? function (o) {
-    console.error('** fanboy: %s', util.inspect(o))
-  } : nop
-})()
-
-var testing = parseInt(process.env.NODE_TEST, 10) === 1
+const TEST = parseInt(process.env.NODE_TEST, 10) === 1
 
 function Opts (opts) {
   opts = opts || Object.create(null)
@@ -89,7 +84,7 @@ Fanboy.prototype.suggest = function (opts) {
   return new SearchTerms(this.db, o)
 }
 
-if (testing) {
+if (TEST) {
   Fanboy.prototype.close = function (cb) {
     this.db.close(cb)
   }
@@ -265,6 +260,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   }
 
   var opts = this.reqOpts(term)
+  debug(opts)
 
   function fallback () {
     if (skip()) return cb()
@@ -572,7 +568,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
   reader.on('readable', read)
 }
 
-if (testing) {
+if (TEST) {
   exports.base = FanboyTransform
   exports.debug = debug
   exports.defaults = defaults

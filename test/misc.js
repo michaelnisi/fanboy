@@ -18,11 +18,6 @@ test('resOp', function (t) {
   t.end()
 })
 
-test('debug', function (t) {
-  t.ok((fanboy.debug === fanboy.nop) === !process.env.DEBUG)
-  t.end()
-})
-
 function str (o) {
   return JSON.stringify(o)
 }

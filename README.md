@@ -1,8 +1,8 @@
+[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
+
 # fanboy - cache itunes search
 
 The **fanboy** [Node.js](http://nodejs.org/) package implements a cache for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
-
-[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
 
 ## Types
 

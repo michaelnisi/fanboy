@@ -1,4 +1,5 @@
-*.log
+.nyc_output
 .pid
 TAP
 node_modules
+npm-debug.log
