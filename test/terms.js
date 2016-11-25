@@ -1,9 +1,9 @@
 var common = require('./lib/common')
 var keys = require('../lib/keys')
-var string_decoder = require('string_decoder')
+var StringDecoder = require('string_decoder').StringDecoder
 var test = require('tap').test
 
-var decoder = new string_decoder.StringDecoder('utf8')
+var decoder = new StringDecoder('utf8')
 
 function decode (buf) {
   return decoder.write(buf)

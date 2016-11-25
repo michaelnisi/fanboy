@@ -3,6 +3,7 @@
 exports = module.exports = Fanboy
 
 const JSONStream = require('JSONStream')
+const StringDecoder = require('string_decoder').StringDecoder
 const events = require('events')
 const http = require('http')
 const https = require('https')
@@ -13,19 +14,16 @@ const lru = require('lru-cache')
 const querystring = require('querystring')
 const reduce = require('./lib/reduce')
 const stream = require('readable-stream')
-const string_decoder = require('string_decoder')
 const util = require('util')
 
+const TEST = process.mainModule.filename.match(/test/) !== null
 const debug = util.debuglog('fanboy')
-
 function nop () {}
-
-const TEST = parseInt(process.env.NODE_TEST, 10) === 1
 
 function Opts (opts) {
   opts = opts || Object.create(null)
   this.cache = opts.cache || { set: nop, get: nop, reset: nop }
-  this.cacheSize = opts.cacheSize || 8 * 1024 * 1024
+  this.cacheSize = opts.cacheSize || 8 * 1024 * 1024
   this.country = opts.country || 'us'
   this.highWaterMark = opts.highWaterMark || 16
   this.hostname = opts.hostname || 'itunes.apple.com'
@@ -105,7 +103,7 @@ function FanboyTransform (db, opts) {
   stream.Transform.call(this, sopts)
 
   util._extend(this, opts)
-  this.decoder = new string_decoder.StringDecoder()
+  this.decoder = new StringDecoder()
   this.state = 0
   this._readableState.objectMode = opts.objectMode
 }
@@ -251,6 +249,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     cb = keys
     keys = null
   }
+  // TODO: Replace me with arrow function
   var me = this
   function skip () {
     return me.cache.has(term)
@@ -379,27 +378,28 @@ util.inherits(Lookup, FanboyTransform)
 // - id the iTunes ID
 // - cb cb(er, value)
 function resultForID (db, id, cb) {
-  var key = keys.resKey(id)
-  db.get(key, function (er, value) {
+  const key = keys.resKey(id)
+  db.get(key, (er, value) => {
     cb(er, value)
   })
 }
 
 // - chunk iTunes ID (e.g. '537879700')
 Lookup.prototype._transform = function (chunk, enc, cb) {
-  var me = this
-  var db = this.db
-  var guid = this.decode(chunk)
+  const db = this.db
+  const guid = this.decode(chunk)
+
   if (!parseInt(guid, 10)) {
     return cb(new Error('fanboy: guid ' + guid + ' is not a number'))
   }
-  resultForID(db, guid, function (er, value) {
+
+  resultForID(db, guid, (er, value) => {
     if (er) {
       if (er.notFound) {
-        return me.request(guid, cb)
+        return this.request(guid, cb)
       }
     } else if (value !== undefined) {
-      me.use(value)
+      this.use(value)
     }
     cb(er)
   })
@@ -442,6 +442,7 @@ function LROpts (db) {
 }
 
 Search.prototype.resultsForKeys = function (keys, cb) {
+  // TODO: Replace me with arrow function
   var me = this
   var s = lr(new LROpts(this.db))
   function read () {
@@ -504,6 +505,7 @@ Search.prototype.resultsForKeys = function (keys, cb) {
 
 Search.prototype._transform = function (chunk, enc, cb) {
   var term = this.decode(chunk)
+  // TODO: Replace me with arrow function
   var me = this
   this.keysForTerm(term, function (er, keys) {
     if (er) {
@@ -531,6 +533,7 @@ function keyStream (db, term) {
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
   var term = this.decode(chunk)
+  // TODO: Replace me with arrow function
   var me = this
   var reader = keyStream(this.db, term)
   function read () {

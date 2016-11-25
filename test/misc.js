@@ -60,7 +60,8 @@ test('putOps', function (t) {
     { type: 'put', key: keys[0], value: str(results[0]) },
     { type: 'put', key: keys[1], value: str(results[1]) },
     { type: 'put', key: keys[2], value: str(results[2]) },
-    { type: 'put', key: ['fnb', 'trm', 'abc'].join(DIV),
+    { type: 'put',
+      key: ['fnb', 'trm', 'abc'].join(DIV),
       value: str([now].concat(keys))}
   ]
   var found = fanboy.putOps('abc', results, now)

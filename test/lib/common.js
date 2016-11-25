@@ -1,25 +1,27 @@
-exports.teardown = teardown
-exports.freshCache = freshCache
+'use-strict'
 
-var fanboy = require('../../')
-var rimraf = require('rimraf')
+exports.freshCache = freshCache
+exports.teardown = teardown
+
+const fanboy = require('../../')
+const rimraf = require('rimraf')
 
 function freshCache (highWaterMark) {
-  var name = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
-  var opts = {
+  const name = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
+  const opts = {
     highWaterMark: highWaterMark || Math.round(Math.random() * 16),
     media: 'podcast'
   }
-  var cache = fanboy(name, opts)
+  const cache = fanboy(name, opts)
   return cache
 }
 
 function teardown (cache, cb) {
-  var db = cache.db
-  db.close(function (er) {
+  const db = cache.db
+  db.close((er) => {
     if (er) throw er
-    var name = db.location
-    rimraf(name, function (er) {
+    const name = db.location
+    rimraf(name, (er) => {
       if (er) throw er
       cb()
     })
