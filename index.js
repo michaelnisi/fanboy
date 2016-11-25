@@ -220,6 +220,8 @@ function ReqOpts (hostname, keepAlive, port, method, path) {
 // - term The search term
 FanboyTransform.prototype.reqOpts = function (term) {
   term = term || this.term
+  // TODO: Remove country
+  // … or prove, it makes a difference.
   var p = mkpath(this.path, term, this.media, this.country)
   return new ReqOpts(this.hostname, true, this.port, this.method, p)
 }
@@ -242,17 +244,16 @@ function parse (readable) {
 }
 
 // Request lookup or search for term.
-// - term String() iTunes ID or search term
-// - keys [String] Array of cached keys (optional)
+//
+// - term String iTunes ID or search term.
+// - keys [String] Array of cached keys (optional).
 FanboyTransform.prototype.request = function (term, keys, cb) {
   if (typeof keys === 'function') {
     cb = keys
     keys = null
   }
-  // TODO: Replace me with arrow function
-  var me = this
-  function skip () {
-    return me.cache.has(term)
+  let skip = () => {
+    return this.cache.has(term)
   }
   if (skip()) {
     return cb()
@@ -261,29 +262,29 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   var opts = this.reqOpts(term)
   debug(opts)
 
-  function fallback () {
+  let fallback = () => {
     if (skip()) return cb()
     if (keys) {
-      return me.resultsForKeys(keys, cb)
+      return this.resultsForKeys(keys, cb)
     }
-    me.keysForTerm(term, function (er, keys) {
+    this.keysForTerm(term, (er, keys) => {
       if (er) {
         return cb(er.notFound ? null : er)
       }
-      me.resultsForKeys(keys, cb)
+      this.resultsForKeys(keys, cb)
     })
   }
 
   var mod = opts.port === 443 ? https : http
-  var req = mod.request(opts, function (res) {
+  var req = mod.request(opts, (res) => {
     var statusCode = res.statusCode
     if (statusCode !== 200) {
-      res.once('end', function () {
+      res.once('end', () => {
         var er = new Error('fanboy: unexpected response ' + statusCode)
         er.statusCode = statusCode
         er.headers = res.headers
         util._extend(er, opts)
-        me.emit('error', er)
+        this.emit('error', er)
         cb()
       })
       return res.resume()
@@ -293,26 +294,26 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       parser.resume()
     }
     var results = []
-    function ondata (obj) {
+    let ondata = (obj) => {
       var result = reduce(obj)
       if (result) {
         results.push(result)
         var chunk = JSON.stringify(result)
-        if (!me.use(chunk)) {
+        if (!this.use(chunk)) {
           parser.pause()
-          me.on('drain', ondrain)
+          this.on('drain', ondrain)
         }
       }
     }
     var ok = true
-    function onend () {
+    let onend = () => {
       if (results.length) {
-        put(me.db, term, results, function (er) {
+        put(this.db, term, results, (er) => {
           done(er)
         })
       } else if (ok) {
-        var cache = me.cache
-        del(me.db, term, function (er) {
+        var cache = this.cache
+        del(this.db, term, (er) => {
           cache.set(term, true)
           done(er)
         })
@@ -325,27 +326,26 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       var er = new Error('fanboy: parse error: ' + error.message)
       done(er)
     }
-    function done (er) {
+    let done = (er) => {
       if (!cb) return
-      me.removeListener('drain', ondrain)
+      this.removeListener('drain', ondrain)
       parser.removeListener('data', ondata)
       parser.removeListener('end', onend)
       parser.removeListener('error', onerror)
       cb(er)
       cb = null
-      me = null
     }
     parser.on('data', ondata)
     parser.on('end', onend)
     parser.on('error', onerror)
   })
-  function onRequestError (error) {
+  let onRequestError = (error) => {
     req.removeListener('error', onRequestError)
     var er = util._extend(new Error(), error)
     er.message = 'fanboy: ' + error.message
     if (keys) {
       er.message = 'fanboy: falling back on cache ' + er.code
-      me.emit('error', er)
+      this.emit('error', er)
       return fallback()
     }
     cb(er)
@@ -442,20 +442,18 @@ function LROpts (db) {
 }
 
 Search.prototype.resultsForKeys = function (keys, cb) {
-  // TODO: Replace me with arrow function
-  var me = this
   var s = lr(new LROpts(this.db))
-  function read () {
-    if (me._writableState.needDrain) return
+  let read = () => {
+    if (this._writableState.needDrain) return
     var ok = true
     var chunk
     while (ok && (chunk = s.read()) !== null) {
-      ok = me.use(chunk)
+      ok = this.use(chunk)
     }
     if (!ok) {
-      me.once('drain', read)
+      this.once('drain', read)
     } else {
-      me.removeListener('drain', read)
+      this.removeListener('drain', read)
     }
   }
   var notFound = []
@@ -505,17 +503,15 @@ Search.prototype.resultsForKeys = function (keys, cb) {
 
 Search.prototype._transform = function (chunk, enc, cb) {
   var term = this.decode(chunk)
-  // TODO: Replace me with arrow function
-  var me = this
-  this.keysForTerm(term, function (er, keys) {
+  this.keysForTerm(term, (er, keys) => {
     if (er) {
       if (er.notFound) {
-        me.request(term, keys, cb)
+        this.request(term, keys, cb)
       } else {
         cb(er)
       }
     } else {
-      me.resultsForKeys(keys, cb)
+      this.resultsForKeys(keys, cb)
     }
   })
 }
@@ -533,10 +529,9 @@ function keyStream (db, term) {
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
   var term = this.decode(chunk)
-  // TODO: Replace me with arrow function
-  var me = this
   var reader = keyStream(this.db, term)
-  function read () {
+
+  let read = () => {
     var chunk
     var ok
     var sug
@@ -544,11 +539,11 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
       chunk = reader.read()
       if (chunk) {
         sug = keys.termFromKey(chunk)
-        ok = me.use('"' + sug + '"')
+        ok = this.use('"' + sug + '"')
       }
     } while (chunk && ok)
     if (ok === false) {
-      me.once('drain', read)
+      this.once('drain', read)
     }
   }
   function onerror (error) {
@@ -564,7 +559,6 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     reader.removeListener('readable', read)
     cb(er)
     cb = null
-    me = null
   }
   reader.on('end', done)
   reader.on('error', onerror)
