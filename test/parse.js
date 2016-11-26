@@ -1,3 +1,5 @@
+'use strict'
+
 var fs = require('fs')
 var parse = require('../').parse
 var path = require('path')

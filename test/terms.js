@@ -1,3 +1,5 @@
+'use strict'
+
 var common = require('./lib/common')
 var keys = require('../lib/keys')
 var StringDecoder = require('string_decoder').StringDecoder

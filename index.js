@@ -1,3 +1,5 @@
+'use strict'
+
 // fanboy - search itunes store
 
 exports = module.exports = Fanboy
@@ -34,7 +36,7 @@ function Opts (opts) {
   this.path = opts.path || '/search'
   this.port = opts.port || 80
   this.reduce = opts.reduce || reduce
-  this.ttl = opts.ttl || 24 * 3600 * 1000
+  this.ttl = opts.ttl || 24 * 36e5
 }
 
 function defaults (opts) {
@@ -60,7 +62,7 @@ util.inherits(Fanboy, events.EventEmitter)
 
 function overrideStreamOpts (a, b) {
   if (!a) return b
-  var opts = util._extend(Object.create(null), b)
+  const opts = util._extend(Object.create(null), b)
   opts.highWaterMark = a.highWaterMark
   opts.encoding = a.encoding
   opts.objectMode = a.objectMode
@@ -68,17 +70,17 @@ function overrideStreamOpts (a, b) {
 }
 
 Fanboy.prototype.search = function (opts) {
-  var o = overrideStreamOpts(opts, this.opts)
+  const o = overrideStreamOpts(opts, this.opts)
   return new Search(this.db, o)
 }
 
 Fanboy.prototype.lookup = function (opts) {
-  var o = overrideStreamOpts(opts, this.opts)
+  const o = overrideStreamOpts(opts, this.opts)
   return new Lookup(this.db, o)
 }
 
 Fanboy.prototype.suggest = function (opts) {
-  var o = overrideStreamOpts(opts, this.opts)
+  const o = overrideStreamOpts(opts, this.opts)
   return new SearchTerms(this.db, o)
 }
 
@@ -99,7 +101,7 @@ function FanboyTransform (db, opts) {
   this.db = db
   opts = defaults(opts)
 
-  var sopts = new TransformOpts(opts.highWaterMark)
+  const sopts = new TransformOpts(opts.highWaterMark)
   stream.Transform.call(this, sopts)
 
   util._extend(this, opts)
@@ -113,20 +115,20 @@ FanboyTransform.prototype.decode = function (chunk) {
   return this.decoder.write(chunk).toLowerCase()
 }
 
-var TOKENS = ['[', ',', ']\n']
+const TOKENS = ['[', ',', ']\n']
 FanboyTransform.prototype.use = function (chunk) {
   if (this._readableState.objectMode) {
-    var obj = null
+    let obj = null
     try {
       obj = JSON.parse(chunk)
     } catch (error) {
-      var er = new Error('fanboy: cannot use: ' + error.message)
+      const er = new Error('fanboy: cannot use: ' + error.message)
       this.emit('error', er)
       return true
     }
     return obj !== null ? this.push(obj) : true
   } else {
-    var more = this.push(TOKENS[this.state] + chunk)
+    const more = this.push(TOKENS[this.state] + chunk)
     this.state = 1
     return more
   }
@@ -156,24 +158,23 @@ function Bulk (type, key, value) {
 
 function termOp (term, kees, now) {
   now = now || Date.now()
-  var k = keys.termKey(term)
-  var v = JSON.stringify([now].concat(kees))
+  const k = keys.termKey(term)
+  const v = JSON.stringify([now].concat(kees))
   return new Bulk('put', k, v)
 }
 
 function resOp (result, now) {
   now = now || Date.now()
   result.ts = now
-  var k = keys.resKey(result.guid)
-  var v = JSON.stringify(result)
+  const k = keys.resKey(result.guid)
+  const v = JSON.stringify(result)
   return new Bulk('put', k, v)
 }
 
 function putOps (term, results, now) {
-  var op
-  var ops = []
-  var keys = results.map(function (result) {
-    op = resOp(result, now)
+  const ops = []
+  const keys = results.map((result) => {
+    const op = resOp(result, now)
     ops.push(op)
     return op.key
   })
@@ -193,18 +194,18 @@ function del (db, term, cb) {
   db.del(keys.termKey(term), cb)
 }
 
-var verbs = { '/search': 'term', '/lookup': 'id' }
+const verbs = { '/search': 'term', '/lookup': 'id' }
 function decorate (obj, path, term) {
   obj[verbs[path]] = term
   return obj
 }
 
 function mkpath (path, term, media, country) {
-  var obj = path === '/lookup' ? Object.create(null) : {
+  const obj = path === '/lookup' ? Object.create(null) : {
     media: media,
     country: country
   }
-  var q = querystring.stringify(decorate(obj, path, term))
+  const q = querystring.stringify(decorate(obj, path, term))
   return [path, q].join('?')
 }
 
@@ -216,20 +217,22 @@ function ReqOpts (hostname, keepAlive, port, method, path) {
   this.port = port
 }
 
-// HTTP request options
-// - term The search term
+// HTTP request options.
+//
+// - term String The search term.
 FanboyTransform.prototype.reqOpts = function (term) {
   term = term || this.term
-  // TODO: Remove country
-  // … or prove, it makes a difference.
-  var p = mkpath(this.path, term, this.media, this.country)
+
+  // Anecdotally, it appears that the country selector doesn’t make any difference.
+
+  const p = mkpath(this.path, term, this.media, this.country)
   return new ReqOpts(this.hostname, true, this.port, this.method, p)
 }
 
-// JSONStream is objectionable.
 function parse (readable) {
-  var parser = JSONStream.parse('results.*')
-  function onerror () {
+  const parser = JSONStream.parse('results.*')
+  function onerror (er) {
+    debug(er)
     parser.end()
     onend()
   }
@@ -259,7 +262,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     return cb()
   }
 
-  var opts = this.reqOpts(term)
+  const opts = this.reqOpts(term)
   debug(opts)
 
   let fallback = () => {
@@ -275,12 +278,12 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     })
   }
 
-  var mod = opts.port === 443 ? https : http
-  var req = mod.request(opts, (res) => {
-    var statusCode = res.statusCode
+  const mod = opts.port === 443 ? https : http
+  let req = mod.request(opts, (res) => {
+    const statusCode = res.statusCode
     if (statusCode !== 200) {
       res.once('end', () => {
-        var er = new Error('fanboy: unexpected response ' + statusCode)
+        const er = new Error('fanboy: unexpected response ' + statusCode)
         er.statusCode = statusCode
         er.headers = res.headers
         util._extend(er, opts)
@@ -289,30 +292,30 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       })
       return res.resume()
     }
-    var parser = parse(res)
+    const parser = parse(res)
     function ondrain () {
       parser.resume()
     }
-    var results = []
+    const results = []
     let ondata = (obj) => {
-      var result = reduce(obj)
+      const result = reduce(obj)
       if (result) {
         results.push(result)
-        var chunk = JSON.stringify(result)
+        const chunk = JSON.stringify(result)
         if (!this.use(chunk)) {
           parser.pause()
           this.on('drain', ondrain)
         }
       }
     }
-    var ok = true
+    let ok = true
     let onend = () => {
       if (results.length) {
         put(this.db, term, results, (er) => {
           done(er)
         })
       } else if (ok) {
-        var cache = this.cache
+        const cache = this.cache
         del(this.db, term, (er) => {
           cache.set(term, true)
           done(er)
@@ -323,7 +326,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     }
     function onerror (error) {
       ok = false
-      var er = new Error('fanboy: parse error: ' + error.message)
+      const er = new Error('fanboy: parse error: ' + error.message)
       done(er)
     }
     let done = (er) => {
@@ -341,7 +344,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   })
   let onRequestError = (error) => {
     req.removeListener('error', onRequestError)
-    var er = util._extend(new Error(), error)
+    const er = util._extend(new Error(), error)
     er.message = 'fanboy: ' + error.message
     if (keys) {
       er.message = 'fanboy: falling back on cache ' + er.code
@@ -417,9 +420,9 @@ function isStale (time, ttl) {
 }
 
 Search.prototype.keysForTerm = function (term, cb) {
-  var ttl = this.ttl
-  this.db.get(keys.termKey(term), function (er, value) {
-    var keys
+  const ttl = this.ttl
+  this.db.get(keys.termKey(term), (er, value) => {
+    let keys
     if (!er && !!value) {
       try {
         keys = JSON.parse(value)
@@ -442,11 +445,11 @@ function LROpts (db) {
 }
 
 Search.prototype.resultsForKeys = function (keys, cb) {
-  var s = lr(new LROpts(this.db))
+  const s = lr(new LROpts(this.db))
   let read = () => {
     if (this._writableState.needDrain) return
-    var ok = true
-    var chunk
+    let ok = true
+    let chunk
     while (ok && (chunk = s.read()) !== null) {
       ok = this.use(chunk)
     }
@@ -456,18 +459,18 @@ Search.prototype.resultsForKeys = function (keys, cb) {
       this.removeListener('drain', read)
     }
   }
-  var notFound = []
+  const notFound = []
   function onerror (error) {
     if (error.notFound) {
       notFound.push(error)
     } else {
-      var er = new Error('fanboy: ' + error.message)
+      const er = new Error('fanboy: ' + error.message)
       done(er)
     }
   }
   function write () {
-    var ok = false
-    var chunk
+    let ok = false
+    let chunk
     while ((chunk = keys.shift())) {
       ok = s.write(chunk)
     }
@@ -479,8 +482,8 @@ Search.prototype.resultsForKeys = function (keys, cb) {
     }
   }
   function onend () {
-    var er
-    var inconsistent = notFound.length > 0
+    let er
+    const inconsistent = notFound.length > 0
     if (inconsistent) {
       er = new Error('fanboy: inconsistent database')
       er.reason = notFound
@@ -502,7 +505,7 @@ Search.prototype.resultsForKeys = function (keys, cb) {
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
-  var term = this.decode(chunk)
+  const term = this.decode(chunk)
   this.keysForTerm(term, (er, keys) => {
     if (er) {
       if (er.notFound) {
@@ -528,13 +531,13 @@ function keyStream (db, term) {
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
-  var term = this.decode(chunk)
-  var reader = keyStream(this.db, term)
+  const term = this.decode(chunk)
+  const reader = keyStream(this.db, term)
 
   let read = () => {
-    var chunk
-    var ok
-    var sug
+    let chunk
+    let ok
+    let sug
     do {
       chunk = reader.read()
       if (chunk) {
@@ -547,7 +550,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     }
   }
   function onerror (error) {
-    var er = new Error('fanboy: failed to stream keys: ' + error.message)
+    const er = new Error('fanboy: failed to stream keys: ' + error.message)
     er.term = term
     done(er)
   }

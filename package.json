@@ -38,13 +38,13 @@
     "search",
     "api"
   ],
-  "author": "Michael Nisi <michael.nisi@gmail.com> (http://michaelnisi.com/)",
+  "author": "Michael Nisi <michael.nisi@gmail.com> (http://troubled.pro)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/michaelnisi/fanboy/issues"
   },
   "homepage": "https://github.com/michaelnisi/fanboy",
   "engines": {
-    "node": ">=4"
+    "node": ">=6"
   }
 }

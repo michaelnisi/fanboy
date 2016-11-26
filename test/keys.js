@@ -1,3 +1,5 @@
+'use strict'
+
 var keys = require('../lib/keys')
 var test = require('tap').test
 

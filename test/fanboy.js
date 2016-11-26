@@ -1,3 +1,5 @@
+'use strict'
+
 var fanboy = require('../')
 var test = require('tap').test
 
