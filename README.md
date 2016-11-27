@@ -1,4 +1,5 @@
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
+[![Coverage Status](https://coveralls.io/repos/github/michaelnisi/fanboy/badge.svg?branch=master)](https://coveralls.io/github/michaelnisi/fanboy?branch=master)
 
 # fanboy - cache itunes search
 
@@ -52,9 +53,9 @@ The **fanboy** module exports a single function that returns a new cache object 
 - `opts` `opts() | void()` Optional parameters of the cache.
 
 ```js
-var fanboy = require('fanboy')
+const fanboy = require('fanboy')
 
-var cache = fanboy('/tmp/fanboy.db', {
+const cache = fanboy('/tmp/fanboy.db', {
   type: 'podcast'
 })
 ```
@@ -62,7 +63,7 @@ var cache = fanboy('/tmp/fanboy.db', {
 ### Searching the cache
 
 ```js
-var search = cache.search()
+const search = cache.search()
 search.end('merlin mann')
 search.pipe(process.stdout)
 ```
@@ -78,7 +79,7 @@ This will search remotely and cache the result, subsequent requests will use the
 ### Looking up a guid
 
 ```js
-var lookup = cache.lookup()
+const lookup = cache.lookup()
 lookup.end('471418144')
 lookup.pipe(process.stdout)
 ```
@@ -92,7 +93,7 @@ $ node example/lookup | json
 ### Getting suggestions for search terms
 
 ```js
-var suggest = cache.suggest()
+const suggest = cache.suggest()
 suggest.end('m')
 suggest.pipe(process.stdout)
 ```
@@ -111,7 +112,7 @@ The `search`, `lookup`, and `suggest` functions accept an optional stream option
 
 ## Installation
 
-With [npm](https://npmjs.org/package/fanboy) do:
+With [npm](https://npmjs.org/package/fanboy), do:
 
 ```
 $ npm install fanboy
