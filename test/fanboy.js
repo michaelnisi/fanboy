@@ -19,7 +19,7 @@ test('defaults', function (t) {
     objectMode: false,
     path: '/search',
     port: 80,
-    reduce: fanboy.reduce,
+    element: fanboy.element,
     ttl: 86400000
   }
   t.deepEquals(f(), wanted)
@@ -50,7 +50,7 @@ test('FanboyTransform', function (t) {
   t.is(typeof obj.reqOpts, 'function')
   t.is(typeof obj.request, 'function')
   t.is(obj.ttl, 86400000)
-  t.is(typeof obj.reduce, 'function')
+  t.is(typeof obj.element, 'function')
   t.is(obj.port, 80)
   t.is(obj.max, 500)
   t.is(obj.method, 'GET')

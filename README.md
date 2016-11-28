@@ -1,30 +1,30 @@
 [![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
 [![Coverage Status](https://coveralls.io/repos/github/michaelnisi/fanboy/badge.svg?branch=master)](https://coveralls.io/github/michaelnisi/fanboy?branch=master)
 
-# fanboy - cache itunes search
+# fanboy
 
-The **fanboy** [Node.js](http://nodejs.org/) package implements a cache for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
+The **fanboy** [Node.js](http://nodejs.org/) package implements proxy caching for parts of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
 
 ## Types
 
-### void()
+### element(result)
 
-Compound type representing `undefined` or `null`.
+A `function` applied to each `result`.
 
-### reduce()
+- `result` The original, JSON parsed, [iTunes search result](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html#understand) object.
 
-A `function` applied to each [iTunes search result](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html#understand). The default `lib/reduce.js`—for podcasts—produces:
+The default, `lib/element.js`, interprets results as podcasts:
 
-- `author` `String()`
-- `feed` `String()`
-- `guid` `Number()`
-- `img100` `String()`
-- `img30` `String()`
-- `img60` `String()`
-- `img600` `String()`
-- `title` `String()`
-- `updated` `Number()`
-- `ts` `Number()`
+- `author` `String`
+- `feed` `String`
+- `guid` `Number`
+- `img100` `String`
+- `img30` `String`
+- `img60` `String`
+- `img600` `String`
+- `title` `String`
+- `updated` `Number`
+- `ts` `Number`
 
 ### opts()
 
@@ -49,8 +49,8 @@ The **fanboy** module exports a single function that returns a new cache object 
 
 `fanboy(name, opts)`
 
-- `name` `String()` The name of the file system directory for the database.
-- `opts` `opts() | void()` Optional parameters of the cache.
+- `name` `String` The name of the file system directory for the database.
+- `opts` `opts()` Optional parameters of the cache.
 
 ```js
 const fanboy = require('fanboy')

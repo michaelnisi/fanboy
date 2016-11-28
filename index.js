@@ -6,6 +6,7 @@ exports = module.exports = Fanboy
 
 const JSONStream = require('JSONStream')
 const StringDecoder = require('string_decoder').StringDecoder
+const element = require('./lib/element')
 const events = require('events')
 const http = require('http')
 const https = require('https')
@@ -14,7 +15,6 @@ const levelup = require('levelup')
 const lr = require('level-random')
 const lru = require('lru-cache')
 const querystring = require('querystring')
-const reduce = require('./lib/reduce')
 const stream = require('readable-stream')
 const util = require('util')
 
@@ -35,7 +35,7 @@ function Opts (opts) {
   this.objectMode = !!opts.objectMode
   this.path = opts.path || '/search'
   this.port = opts.port || 80
-  this.reduce = opts.reduce || reduce
+  this.element = opts.element || element
   this.ttl = opts.ttl || 24 * 36e5
 }
 
@@ -137,7 +137,7 @@ FanboyTransform.prototype.use = function (chunk) {
 FanboyTransform.prototype.deinit = function () {
   this.cache = null
   this.db = null
-  this.reduce = null
+  this.element = null
 }
 
 FanboyTransform.prototype._flush = function (cb) {
@@ -298,7 +298,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     }
     const results = []
     let ondata = (obj) => {
-      const result = reduce(obj)
+      const result = element(obj)
       if (result) {
         results.push(result)
         const chunk = JSON.stringify(result)
@@ -578,7 +578,7 @@ if (TEST) {
   exports.overrideStreamOpts = overrideStreamOpts
   exports.parse = parse
   exports.putOps = putOps
-  exports.reduce = reduce
+  exports.element = element
   exports.resOp = resOp
   exports.search = Search
   exports.suggest = SearchTerms
