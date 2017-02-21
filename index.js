@@ -6,7 +6,6 @@ exports = module.exports = Fanboy
 
 const JSONStream = require('JSONStream')
 const StringDecoder = require('string_decoder').StringDecoder
-const element = require('./lib/element')
 const events = require('events')
 const http = require('http')
 const https = require('https')
@@ -18,29 +17,60 @@ const querystring = require('querystring')
 const stream = require('readable-stream')
 const util = require('util')
 
-const TEST = process.mainModule.filename.match(/test/) !== null
 const debug = util.debuglog('fanboy')
+
+const TEST = process.mainModule.filename.match(/test/) !== null
+
 function nop () {}
 
-function Opts (opts) {
-  opts = opts || Object.create(null)
-  this.cache = opts.cache || { set: nop, get: nop, reset: nop }
-  this.cacheSize = opts.cacheSize || 8 * 1024 * 1024
-  this.country = opts.country || 'us'
-  this.highWaterMark = opts.highWaterMark || 16
-  this.hostname = opts.hostname || 'itunes.apple.com'
-  this.max = opts.max || 500
-  this.media = opts.media || 'all'
-  this.method = opts.method || 'GET'
-  this.objectMode = !!opts.objectMode
-  this.path = opts.path || '/search'
-  this.port = opts.port || 80
-  this.element = opts.element || element
-  this.ttl = opts.ttl || 24 * 36e5
+function guid (obj) {
+  obj.guid = obj.collectionId
+  return obj
 }
 
-function defaults (opts) {
-  return new Opts(opts)
+function Opts (
+  cache = { set: nop, get: nop, reset: nop },
+  cacheSize = 8 * 1024 * 1024,
+  country = 'us',
+  highWaterMark = 16,
+  hostname = 'itunes.apple.com',
+  max = 500,
+  media = 'all',
+  objectMode = false,
+  path = '/search',
+  port = 80,
+  result = guid,
+  ttl = 24 * 36e5
+) {
+  this.cache = cache
+  this.cacheSize = cacheSize
+  this.country = country
+  this.result = result
+  this.highWaterMark = highWaterMark
+  this.hostname = hostname
+  this.max = max
+  this.media = media
+  this.objectMode = objectMode
+  this.path = path
+  this.port = port
+  this.ttl = ttl
+}
+
+function defaults (opts = Object.create(null)) {
+  return new Opts(
+    opts.cache,
+    opts.cacheSize,
+    opts.country,
+    opts.highWaterMark,
+    opts.hostname,
+    opts.max,
+    opts.media,
+    opts.objectMode,
+    opts.path,
+    opts.port,
+    opts.result,
+    opts.ttl
+  )
 }
 
 function sharedState (opts) {
@@ -55,14 +85,13 @@ function Fanboy (name, opts) {
   this.db = levelup(name, {
     cacheSize: opts.cacheSize
   })
-  opts = sharedState(opts)
-  this.opts = opts
+  this.opts = sharedState(opts)
 }
 util.inherits(Fanboy, events.EventEmitter)
 
 function overrideStreamOpts (a, b) {
   if (!a) return b
-  const opts = util._extend(Object.create(null), b)
+  const opts = Object.assign(Object.create(null), b)
   opts.highWaterMark = a.highWaterMark
   opts.encoding = a.encoding
   opts.objectMode = a.objectMode
@@ -104,7 +133,7 @@ function FanboyTransform (db, opts) {
   const sopts = new TransformOpts(opts.highWaterMark)
   stream.Transform.call(this, sopts)
 
-  util._extend(this, opts)
+  Object.assign(this, opts)
   this.decoder = new StringDecoder()
   this.state = 0
   this._readableState.objectMode = opts.objectMode
@@ -137,7 +166,7 @@ FanboyTransform.prototype.use = function (chunk) {
 FanboyTransform.prototype.deinit = function () {
   this.cache = null
   this.db = null
-  this.element = null
+  this.result = null
 }
 
 FanboyTransform.prototype._flush = function (cb) {
@@ -226,7 +255,7 @@ FanboyTransform.prototype.reqOpts = function (term) {
   // Anecdotally, it appears that the country selector doesn’t make any difference.
 
   const p = mkpath(this.path, term, this.media, this.country)
-  return new ReqOpts(this.hostname, true, this.port, this.method, p)
+  return new ReqOpts(this.hostname, true, this.port, 'GET', p)
 }
 
 function parse (readable) {
@@ -298,7 +327,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     }
     const results = []
     let ondata = (obj) => {
-      const result = element(obj)
+      const result = this.result(obj)
       if (result) {
         results.push(result)
         const chunk = JSON.stringify(result)
@@ -572,13 +601,13 @@ if (TEST) {
   exports.base = FanboyTransform
   exports.debug = debug
   exports.defaults = defaults
+  exports.guid = guid
   exports.isStale = isStale
   exports.lookup = Lookup
   exports.nop = nop
   exports.overrideStreamOpts = overrideStreamOpts
   exports.parse = parse
   exports.putOps = putOps
-  exports.element = element
   exports.resOp = resOp
   exports.search = Search
   exports.suggest = SearchTerms

@@ -7,24 +7,19 @@ The **fanboy** [Node.js](http://nodejs.org/) package implements proxy caching fo
 
 ## Types
 
-### element(result)
+### void()
 
-A `function` applied to each `result`.
+`null` or `undefined`.
 
-- `result` The original, JSON parsed, [iTunes search result](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html#understand) object.
+### result(obj)
 
-The default, `lib/element.js`, interprets results as podcasts:
+A map or filter callback applied with each JSON result `obj`.
 
-- `author` `String`
-- `feed` `String`
-- `guid` `Number`
-- `img100` `String`
-- `img30` `String`
-- `img60` `String`
-- `img600` `String`
-- `title` `String`
-- `updated` `Number`
-- `ts` `Number`
+- `obj` The original, JSON parsed, [iTunes search result](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html#understand) object.
+
+Returns result or `void()`.
+
+The default callback adds the required `guid` property to `obj` and returns it. For production I’d return a classy object.
 
 ### opts()
 
@@ -38,7 +33,7 @@ The options for the **fanboy** cache:
 - `objectMode` `Boolean` Whether this stream should behave as a stream of objects (`false`).
 - `path` `String` The path to the store (`/search`).
 - `port` `Number` The port to access the store (`80`).
-- `reduce` `reduce()`
+- `result` `result()`
 - `ttl` `Number` Time to live in milliseconds (`24 * 3600 * 1000`).
 
 ## Exports
