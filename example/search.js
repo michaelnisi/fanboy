@@ -1,9 +1,9 @@
-var fanboy = require('../')
+const fanboy = require('../')
 
-var cache = fanboy('/tmp/fanboy.db', {
+const cache = fanboy('/tmp/fanboy.db', {
   media: 'podcast'
 })
 
-var search = cache.search()
-search.end('merlin mann')
+const search = cache.search()
+search.end('invisible')
 search.pipe(process.stdout)

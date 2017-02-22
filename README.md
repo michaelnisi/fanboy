@@ -25,16 +25,16 @@ The default callback adds the required `guid` property to `obj` and returns it. 
 
 The options for the **fanboy** cache:
 
-- `cacheSize` `Number` The cache size (`1024 * 1024 * 8`) passed to [`levelup`](https://github.com/Level/levelup).
-- `country` `String` The country code for the search API. Defaults to `'us'`.
-- `highWaterMark` `Number` Passed to `stream.Readable` constructor. Defaults to `undefined`.
-- `hostname` `String` The host name of the store (`'itunes.apple.com'`).
-- `media` `String` The media type to search for (`'all'`).
-- `objectMode` `Boolean` Whether this stream should behave as a stream of objects (`false`).
-- `path` `String` The path to the store (`/search`).
-- `port` `Number` The port to access the store (`80`).
+- `cacheSize = 1024 * 1024 * 8` The cache size passed to [`levelup`](https://github.com/Level/levelup).
+- `country = 'us'` The country code for the search API.
+- `highWaterMark` `Number` Passed to `stream.Readable` constructor.
+- `hostname = 'itunes.apple.com'` The host name of the store.
+- `media = 'all'` The media type to search for.
+- `objectMode = false` Whether this stream should behave as a stream of objects.
+- `path = '/search'` The path to the store.
+- `port = 80` The port to access the store.
 - `result` `result()`
-- `ttl` `Number` Time to live in milliseconds (`24 * 3600 * 1000`).
+- `ttl = 24 * 3600 * 1000` Time in milliseconds before cached items go stale.
 
 ## Exports
 
@@ -59,17 +59,21 @@ const cache = fanboy('/tmp/fanboy.db', {
 
 ```js
 const search = cache.search()
-search.end('merlin mann')
+search.end('invisible')
 search.pipe(process.stdout)
 ```
 
-To run this printing only the title(s), do:
+Try running this with something like:
 
 ```
-$ node example/search | json -ga title
+$ node example/search | json -ga collectionId
 ```
 
-This will search remotely and cache the result, subsequent requests will use the cache.
+This will search remotely and cache the result. Until the term expires, subsequent requests hit the cache.
+
+### Limiting suggestions and search results
+
+Both, `suggest` and `search`, take a limit parameter, letting you limit the number of search results, which defaults to 50.
 
 ### Looking up a guid
 
@@ -100,10 +104,6 @@ $ node example/suggest | json
 ```
 
 If you have not searched before doing this, you will not get any results, because the suggestions index is populated as we are caching data.
-
-### Overriding stream options
-
-The `search`, `lookup`, and `suggest` functions accept an optional stream options `Object` that lets you override global stream options—`highWaterMark`, `encoding`, and `objectMode`—of your `fanboy` instance.
 
 ## Installation
 

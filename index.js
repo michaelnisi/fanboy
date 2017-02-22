@@ -89,28 +89,16 @@ function Fanboy (name, opts) {
 }
 util.inherits(Fanboy, events.EventEmitter)
 
-function overrideStreamOpts (a, b) {
-  if (!a) return b
-  const opts = Object.assign(Object.create(null), b)
-  opts.highWaterMark = a.highWaterMark
-  opts.encoding = a.encoding
-  opts.objectMode = a.objectMode
-  return opts
+Fanboy.prototype.search = function (limit) {
+  return new Search(this.db, this.opts, limit)
 }
 
-Fanboy.prototype.search = function (opts) {
-  const o = overrideStreamOpts(opts, this.opts)
-  return new Search(this.db, o)
+Fanboy.prototype.lookup = function () {
+  return new Lookup(this.db, this.opts)
 }
 
-Fanboy.prototype.lookup = function (opts) {
-  const o = overrideStreamOpts(opts, this.opts)
-  return new Lookup(this.db, o)
-}
-
-Fanboy.prototype.suggest = function (opts) {
-  const o = overrideStreamOpts(opts, this.opts)
-  return new SearchTerms(this.db, o)
+Fanboy.prototype.suggest = function (limit) {
+  return new SearchTerms(this.db, this.opts, limit)
 }
 
 if (TEST) {
@@ -123,12 +111,16 @@ function TransformOpts (highWaterMark) {
   this.highWaterMark = highWaterMark
 }
 
-function FanboyTransform (db, opts) {
+function FanboyTransform (db, opts, limit) {
   if (!(this instanceof FanboyTransform)) {
     return new FanboyTransform(db, opts)
   }
   this.db = db
-  opts = defaults(opts)
+  this.limit = limit
+
+  if (!(opts instanceof Opts)) {
+    opts = defaults(opts)
+  }
 
   const sopts = new TransformOpts(opts.highWaterMark)
   stream.Transform.call(this, sopts)
@@ -449,7 +441,9 @@ function isStale (time, ttl) {
 
 Search.prototype.keysForTerm = function (term, cb) {
   const ttl = this.ttl
-  this.db.get(keys.termKey(term), (er, value) => {
+  const limit = this.limit
+
+  this.db.get(keys.termKey(term), { limit }, (er, value) => {
     let keys
     if (!er && !!value) {
       try {
@@ -553,13 +547,13 @@ function SearchTerms (db, opts) {
 }
 util.inherits(SearchTerms, FanboyTransform)
 
-function keyStream (db, term) {
-  return db.createKeyStream(keys.rangeForTerm(term))
+function keyStream (db, term, limit) {
+  return db.createKeyStream(keys.rangeForTerm(term, limit))
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
   const term = this.decode(chunk)
-  const reader = keyStream(this.db, term)
+  const reader = keyStream(this.db, term, this.limit)
 
   let read = () => {
     let chunk
@@ -602,7 +596,6 @@ if (TEST) {
   exports.isStale = isStale
   exports.lookup = Lookup
   exports.nop = nop
-  exports.overrideStreamOpts = overrideStreamOpts
   exports.parse = parse
   exports.putOps = putOps
   exports.resOp = resOp
