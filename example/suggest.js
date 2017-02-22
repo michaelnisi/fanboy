@@ -1,9 +1,9 @@
-var fanboy = require('../')
+const fanboy = require('../')
 
-var cache = fanboy('/tmp/fanboy.db', {
-  type: 'podcast'
+const cache = fanboy('/tmp/fanboy.db', {
+  media: 'podcast'
 })
 
-var suggest = cache.suggest()
+const suggest = cache.suggest()
 suggest.end('m')
 suggest.pipe(process.stdout)

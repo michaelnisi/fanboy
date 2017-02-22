@@ -5,13 +5,12 @@ const test = require('tap').test
 
 test('defaults', (t) => {
   const f = fanboy.defaults
-  t.plan(2)
   t.ok(!!f())
   const wanted = {
     cache: { get: fanboy.nop, set: fanboy.nop, reset: fanboy.nop },
     cacheSize: 8388608,
     country: 'us',
-    highWaterMark: 16,
+    highWaterMark: undefined,
     hostname: 'itunes.apple.com',
     max: 500,
     media: 'all',

@@ -25,9 +25,9 @@ The default callback adds the required `guid` property to `obj` and returns it. 
 
 The options for the **fanboy** cache:
 
-- `cacheSize` `Number` The cache size passed to [`levelup`](https://github.com/Level/levelup).
-- `country` `String` The country code for the search API—defaults to `'us'`.
-- `highWaterMark` `Number` Passed to `stream.Readable` constructor.
+- `cacheSize` `Number` The cache size (`1024 * 1024 * 8`) passed to [`levelup`](https://github.com/Level/levelup).
+- `country` `String` The country code for the search API. Defaults to `'us'`.
+- `highWaterMark` `Number` Passed to `stream.Readable` constructor. Defaults to `undefined`.
 - `hostname` `String` The host name of the store (`'itunes.apple.com'`).
 - `media` `String` The media type to search for (`'all'`).
 - `objectMode` `Boolean` Whether this stream should behave as a stream of objects (`false`).
@@ -51,7 +51,7 @@ The **fanboy** module exports a single function that returns a new cache object 
 const fanboy = require('fanboy')
 
 const cache = fanboy('/tmp/fanboy.db', {
-  type: 'podcast'
+  media: 'podcast'
 })
 ```
 

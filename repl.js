@@ -20,9 +20,9 @@ const svc = fanboy('/tmp/fanboy-repl.db', {
 })
 
 // This needs to buffer, of course.
-function read (stream, prop) {
+function read (readable, prop) {
   let obj
-  while ((obj = stream.read()) !== null) {
+  while ((obj = readable.read()) !== null) {
     console.log(util.inspect(
       prop ? obj[prop] : obj, { colors: true }))
   }

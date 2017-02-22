@@ -1,7 +1,7 @@
 var fanboy = require('../')
 
 var cache = fanboy('/tmp/fanboy.db', {
-  type: 'podcast'
+  media: 'podcast'
 })
 
 var search = cache.search()

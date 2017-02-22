@@ -32,7 +32,7 @@ function Opts (
   cache = { set: nop, get: nop, reset: nop },
   cacheSize = 8 * 1024 * 1024,
   country = 'us',
-  highWaterMark = 16,
+  highWaterMark,
   hostname = 'itunes.apple.com',
   max = 500,
   media = 'all',
@@ -365,7 +365,6 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       parser.removeListener('end', onend)
       parser.removeListener('error', onerror)
       cb(er)
-      cb = null
     }
     parser.on('data', ondata)
     parser.on('end', onend)
@@ -528,7 +527,6 @@ Search.prototype.resultsForKeys = function (keys, cb) {
     s.removeListener('error', onerror)
     s.removeListener('readable', read)
     cb(er)
-    cb = null
   }
   write()
 }
@@ -590,7 +588,6 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     reader.removeListener('error', onerror)
     reader.removeListener('readable', read)
     cb(er)
-    cb = null
   }
   reader.on('end', done)
   reader.on('error', onerror)
