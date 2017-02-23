@@ -238,9 +238,6 @@ function ReqOpts (hostname, keepAlive, port, method, path) {
   this.port = port
 }
 
-// HTTP request options.
-//
-// - term String The search term.
 FanboyTransform.prototype.reqOpts = function (term) {
   term = term || this.term
 
@@ -409,6 +406,10 @@ function resultForID (db, id, cb) {
 
 // - chunk iTunes ID (e.g. '537879700')
 Lookup.prototype._transform = function (chunk, enc, cb) {
+  if (this.db.isClosed()) {
+    return cb(new Error('fanboy: database closed'))
+  }
+
   const db = this.db
   const guid = this.decode(chunk)
 
@@ -526,6 +527,10 @@ Search.prototype.resultsForKeys = function (keys, cb) {
 }
 
 Search.prototype._transform = function (chunk, enc, cb) {
+  if (this.db.isClosed()) {
+    return cb(new Error('fanboy: database closed'))
+  }
+
   const term = this.decode(chunk)
   this.keysForTerm(term, (er, keys) => {
     if (er) {
@@ -552,13 +557,18 @@ function keyStream (db, term, limit) {
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
+  if (this.db.isClosed()) {
+    return cb(new Error('fanboy: database closed'))
+  }
+
   const term = this.decode(chunk)
   const reader = keyStream(this.db, term, this.limit)
 
-  let read = () => {
+  const read = () => {
     let chunk
     let ok
     let sug
+
     do {
       chunk = reader.read()
       if (chunk) {
@@ -570,11 +580,13 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
       this.once('drain', read)
     }
   }
+
   function onerror (error) {
     const er = new Error('fanboy: failed to stream keys: ' + error.message)
     er.term = term
     done(er)
   }
+
   function done (er) {
     if (!cb) return
     reader.removeListener('drain', read)
@@ -583,6 +595,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     reader.removeListener('readable', read)
     cb(er)
   }
+
   reader.on('end', done)
   reader.on('error', onerror)
   reader.on('readable', read)
@@ -594,6 +607,7 @@ if (TEST) {
   exports.defaults = defaults
   exports.guid = guid
   exports.isStale = isStale
+  exports.keyStream = keyStream
   exports.lookup = Lookup
   exports.nop = nop
   exports.parse = parse

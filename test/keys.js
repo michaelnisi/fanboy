@@ -1,34 +1,34 @@
 'use strict'
 
-var keys = require('../lib/keys')
-var test = require('tap').test
+const keys = require('../lib/keys')
+const test = require('tap').test
 
-var DIV = '\udbff\udfff'
-var END = '\xff'
+const DIV = '\udbff\udfff'
+const END = '\xff'
 
-test('key', function (t) {
-  var f = keys.key
-  var wanted = [
+test('key', (t) => {
+  const f = keys.key
+  const wanted = [
     ['fnb', 'trm', 'abc'].join(DIV),
     ['fnb', 'res', '123'].join(DIV)
   ]
-  var found = [
+  const found = [
     f(keys.TRM, 'abc'),
     f(keys.RES, 123)
   ]
   t.plan(wanted.length + 4)
-  t.throws(function () { f(null) })
-  t.throws(function () { f(undefined) })
-  t.throws(function () { f('WTF') })
-  t.throws(function () { f('WTF', 'thing') })
-  wanted.forEach(function (it) {
+  t.throws(() => { f(null) })
+  t.throws(() => { f(undefined) })
+  t.throws(() => { f('WTF') })
+  t.throws(() => { f('WTF', 'thing') })
+  wanted.forEach((it) => {
     t.same(found.shift(), it)
   })
 })
 
-test('range', function (t) {
-  var f = keys.range
-  var wanted = [
+test('range', (t) => {
+  const f = keys.range
+  const wanted = [
     { start: ['fnb', 'trm', 'abc'].join(DIV),
       end: ['fnb', 'trm', 'abc'].join(DIV) + END,
       limit: 50 },
@@ -36,19 +36,19 @@ test('range', function (t) {
       end: ['fnb', 'res', '123'].join(DIV) + END,
       limit: 50 }
   ]
-  var found = [
+  const found = [
     f(keys.TRM, 'abc'),
     f(keys.RES, 123)
   ]
   t.plan(wanted.length)
-  wanted.forEach(function (it) {
+  wanted.forEach((it) => {
     t.same(found.shift(), it)
   })
 })
 
-test('trim', function (t) {
-  var f = keys.trim
-  var wanted = [
+test('trim', (t) => {
+  const f = keys.trim
+  const wanted = [
     'abc',
     'abc',
     'abc',
@@ -57,7 +57,7 @@ test('trim', function (t) {
     '123',
     'abc'
   ]
-  var found = [
+  const found = [
     f('abc'),
     f(' abc'),
     f(' abc '),
@@ -66,8 +66,11 @@ test('trim', function (t) {
     f(123),
     f(new Buffer('abc'))
   ]
-  t.plan(wanted.length)
-  wanted.forEach(function (it) {
+  wanted.forEach((it) => {
     t.deepEqual(found.shift(), it)
   })
+
+  t.throws(() => { f({}) })
+
+  t.end()
 })

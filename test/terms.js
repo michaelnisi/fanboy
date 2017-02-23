@@ -11,9 +11,10 @@ function decode (buf) {
   return decoder.write(buf)
 }
 
+const cache = common.freshCache()
+
 test('no results', (t) => {
-  t.plan(2)
-  const cache = common.freshCache()
+  t.plan(1)
   const f = cache.suggest()
   let buf = ''
   f.on('data', (chunk) => {
@@ -23,15 +24,11 @@ test('no results', (t) => {
     const found = JSON.parse(decode(buf))
     const wanted = []
     t.deepEqual(found, wanted)
-    common.teardown(cache, () => {
-      t.pass('should teardown')
-    })
   })
   f.end('xoxoxo')
 })
 
 test('suggest', (t) => {
-  const cache = common.freshCache()
   const db = cache.db
 
   function key (term) {
@@ -48,7 +45,7 @@ test('suggest', (t) => {
     return put(term)
   })
 
-  t.plan(3)
+  t.plan(2)
 
   db.batch(puts, (er) => {
     t.ok(!er)
@@ -68,9 +65,27 @@ test('suggest', (t) => {
       const found = JSON.parse(decode(buf))
       const wanted = ['abc', 'abc', 'abc']
       t.deepEqual(found, wanted)
-      common.teardown(cache, () => {
-        t.pass('should teardown')
-      })
     })
+  })
+})
+
+test('database closed', (t) => {
+  cache.db.close((er) => {
+    if (er) throw er
+    const s = cache.suggest()
+    s.on('error', (er) => {
+      t.is(er.message, 'fanboy: database closed')
+      s.resume()
+    })
+    s.on('end', () => {
+      t.end()
+    })
+    s.end('abc')
+  })
+})
+
+test('teardown', (t) => {
+  common.teardown(cache, () => {
+    t.end()
   })
 })
