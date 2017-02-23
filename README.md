@@ -73,7 +73,7 @@ This will search remotely and cache the result. Until the term expires, subseque
 
 ### Limiting suggestions and search results
 
-Both, `suggest` and `search`, take a limit parameter, letting you limit the number of search results, which defaults to 50.
+Both, `suggest` and `search`, take a limit parameter, letting you limit the number of results, which defaults to 50.
 
 ### Looking up a guid
 

@@ -49,3 +49,18 @@ test('simple', (t) => {
     })
   })
 })
+
+test('database closed', (t) => {
+  const cache = common.freshCache()
+  const f = cache.lookup()
+  cache.db.close((er) => {
+    if (er) throw er
+    f.on('error', (er) => {
+      t.is(er.message, 'fanboy: database closed')
+      common.teardown(cache, () => {
+        t.end()
+      })
+    })
+    f.write('123')
+  })
+})

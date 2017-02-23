@@ -99,3 +99,17 @@ test('no results', { skip: false }, function (t) {
   f.resume()
 })
 
+test('database closed', (t) => {
+  const cache = common.freshCache()
+  const f = cache.search()
+  cache.db.close((er) => {
+    if (er) throw er
+    f.on('error', (er) => {
+      t.is(er.message, 'fanboy: database closed')
+      common.teardown(cache, () => {
+        t.end()
+      })
+    })
+    f.write('abc')
+  })
+})

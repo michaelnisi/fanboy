@@ -530,7 +530,6 @@ Search.prototype._transform = function (chunk, enc, cb) {
   if (this.db.isClosed()) {
     return cb(new Error('fanboy: database closed'))
   }
-
   const term = this.decode(chunk)
   this.keysForTerm(term, (er, keys) => {
     if (er) {

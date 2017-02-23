@@ -9,7 +9,7 @@
   },
   "scripts": {
     "pretest": "standard",
-    "test": "tap test/*.js -b --cov",
+    "test": "tap test/*.js --cov",
     "posttest": "rm -rf /tmp/fanboy-[1-9]*"
   },
   "dependencies": {
