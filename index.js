@@ -1,7 +1,5 @@
 'use strict'
 
-// fanboy - search itunes store
-
 exports = module.exports = Fanboy
 
 const JSONStream = require('JSONStream')
@@ -73,6 +71,8 @@ function defaults (opts = Object.create(null)) {
   )
 }
 
+// TODO: Rename ttl option to maxAge
+
 function sharedState (opts) {
   opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
   return opts
@@ -113,7 +113,7 @@ function TransformOpts (highWaterMark) {
 
 function FanboyTransform (db, opts, limit) {
   if (!(this instanceof FanboyTransform)) {
-    return new FanboyTransform(db, opts)
+    return new FanboyTransform(db, opts, limit)
   }
   this.db = db
   this.limit = limit
@@ -125,7 +125,8 @@ function FanboyTransform (db, opts, limit) {
   const sopts = new TransformOpts(opts.highWaterMark)
   stream.Transform.call(this, sopts)
 
-  Object.assign(this, opts)
+  util._extend(this, opts)
+
   this.decoder = new StringDecoder()
   this.state = 0
   this._readableState.objectMode = opts.objectMode
@@ -264,6 +265,10 @@ function parse (readable) {
   return readable.pipe(parser)
 }
 
+FanboyTransform.prototype.skip = function (term) {
+  return this.cache.has(term)
+}
+
 // Request lookup or search for term.
 //
 // - term String iTunes ID or search term.
@@ -273,9 +278,11 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     cb = keys
     keys = null
   }
-  let skip = () => {
+
+  const skip = () => {
     return this.cache.has(term)
   }
+
   if (skip()) {
     return cb()
   }
@@ -283,7 +290,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   const opts = this.reqOpts(term)
   debug(opts)
 
-  let fallback = () => {
+  const fallback = () => {
     if (skip()) return cb()
     if (keys) {
       return this.resultsForKeys(keys, cb)
@@ -297,8 +304,11 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   }
 
   const mod = opts.port === 443 ? https : http
-  let req = mod.request(opts, (res) => {
+
+  const req = mod.request(opts, (res) => {
     const statusCode = res.statusCode
+    debug(statusCode)
+
     if (statusCode !== 200) {
       res.once('end', () => {
         const er = new Error('fanboy: unexpected response ' + statusCode)
@@ -310,12 +320,13 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       })
       return res.resume()
     }
+
     const parser = parse(res)
     function ondrain () {
       parser.resume()
     }
     const results = []
-    let ondata = (obj) => {
+    const ondata = (obj) => {
       const result = this.result(obj)
       if (result) {
         results.push(result)
@@ -327,15 +338,14 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       }
     }
     let ok = true
-    let onend = () => {
+    const onend = () => {
       if (results.length) {
         put(this.db, term, results, (er) => {
           done(er)
         })
       } else if (ok) {
-        const cache = this.cache
         del(this.db, term, (er) => {
-          cache.set(term, true)
+          this.cache.set(term, true)
           done(er)
         })
       } else {
@@ -373,10 +383,10 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   function onRequestEnd () {
     req.removeListener('error', onRequestError)
     req.removeListener('end', onRequestEnd)
-    req = null
   }
   req.on('error', onRequestError)
   req.on('end', onRequestEnd)
+
   req.end()
 }
 
@@ -429,10 +439,10 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
   })
 }
 
-function Search (db, opts) {
-  if (!(this instanceof Search)) return new Search(db, opts)
+function Search (db, opts, limit) {
+  if (!(this instanceof Search)) return new Search(db, opts, limit)
   if (opts) opts.path = '/search'
-  FanboyTransform.call(this, db, opts)
+  FanboyTransform.call(this, db, opts, limit)
 }
 util.inherits(Search, FanboyTransform)
 
@@ -442,9 +452,9 @@ function isStale (time, ttl) {
 
 Search.prototype.keysForTerm = function (term, cb) {
   const ttl = this.ttl
-  const limit = this.limit
+  const key = keys.termKey(term)
 
-  this.db.get(keys.termKey(term), { limit }, (er, value) => {
+  this.db.get(key, (er, value) => {
     let keys
     if (!er && !!value) {
       try {
@@ -530,7 +540,9 @@ Search.prototype._transform = function (chunk, enc, cb) {
   if (this.db.isClosed()) {
     return cb(new Error('fanboy: database closed'))
   }
+
   const term = this.decode(chunk)
+
   this.keysForTerm(term, (er, keys) => {
     if (er) {
       if (er.notFound) {
@@ -545,9 +557,9 @@ Search.prototype._transform = function (chunk, enc, cb) {
 }
 
 // Suggest search terms
-function SearchTerms (db, opts) {
-  if (!(this instanceof SearchTerms)) return new SearchTerms(db, opts)
-  FanboyTransform.call(this, db, opts)
+function SearchTerms (db, opts, limit) {
+  if (!(this instanceof SearchTerms)) return new SearchTerms(db, opts, limit)
+  FanboyTransform.call(this, db, opts, limit)
 }
 util.inherits(SearchTerms, FanboyTransform)
 
