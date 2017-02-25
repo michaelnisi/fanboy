@@ -71,8 +71,6 @@ function defaults (opts = Object.create(null)) {
   )
 }
 
-// TODO: Rename ttl option to maxAge
-
 function sharedState (opts) {
   opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
   return opts
@@ -89,16 +87,16 @@ function Fanboy (name, opts) {
 }
 util.inherits(Fanboy, events.EventEmitter)
 
-Fanboy.prototype.search = function (limit) {
-  return new Search(this.db, this.opts, limit)
+Fanboy.prototype.search = function () {
+  return new Search(this.db, this.opts)
 }
 
 Fanboy.prototype.lookup = function () {
   return new Lookup(this.db, this.opts)
 }
 
-Fanboy.prototype.suggest = function (limit) {
-  return new SearchTerms(this.db, this.opts, limit)
+Fanboy.prototype.suggest = function () {
+  return new SearchTerms(this.db, this.opts)
 }
 
 if (TEST) {
@@ -111,12 +109,11 @@ function TransformOpts (highWaterMark) {
   this.highWaterMark = highWaterMark
 }
 
-function FanboyTransform (db, opts, limit) {
+function FanboyTransform (db, opts) {
   if (!(this instanceof FanboyTransform)) {
-    return new FanboyTransform(db, opts, limit)
+    return new FanboyTransform(db, opts)
   }
   this.db = db
-  this.limit = limit
 
   if (!(opts instanceof Opts)) {
     opts = defaults(opts)
@@ -178,15 +175,13 @@ function Bulk (type, key, value) {
   this.value = value
 }
 
-function termOp (term, kees, now) {
-  now = now || Date.now()
+function termOp (term, kees, now = Date.now()) {
   const k = keys.termKey(term)
   const v = JSON.stringify([now].concat(kees))
   return new Bulk('put', k, v)
 }
 
-function resOp (result, now) {
-  now = now || Date.now()
+function resOp (result, now = Date.now()) {
   result.ts = now
   const k = keys.resKey(result.guid)
   const v = JSON.stringify(result)
@@ -265,22 +260,21 @@ function parse (readable) {
   return readable.pipe(parser)
 }
 
-FanboyTransform.prototype.skip = function (term) {
-  return this.cache.has(term)
-}
-
-// Request lookup or search for term.
+// Request lookup iTunes ID or search for term. Optional `keys` are used as
+// fallback.
 //
 // - term String iTunes ID or search term.
 // - keys [String] Array of cached keys (optional).
-FanboyTransform.prototype.request = function (term, keys, cb) {
+FanboyTransform.prototype._request = function (term, keys, cb) {
   if (typeof keys === 'function') {
     cb = keys
     keys = null
   }
 
   const skip = () => {
-    return this.cache.has(term)
+    const y = this.cache.has(term)
+    if (y) debug('skipping: %s', term)
+    return y
   }
 
   if (skip()) {
@@ -291,6 +285,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
   debug(opts)
 
   const fallback = () => {
+    debug('falling back')
     if (skip()) return cb()
     if (keys) {
       return this.resultsForKeys(keys, cb)
@@ -333,7 +328,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
         const chunk = JSON.stringify(result)
         if (!this.use(chunk)) {
           parser.pause()
-          this.on('drain', ondrain)
+          this.once('drain', ondrain)
         }
       }
     }
@@ -357,7 +352,7 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       const er = new Error('fanboy: parse error: ' + error.message)
       done(er)
     }
-    let done = (er) => {
+    const done = (er) => {
       if (!cb) return
       this.removeListener('drain', ondrain)
       parser.removeListener('data', ondata)
@@ -366,10 +361,11 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
       cb(er)
     }
     parser.on('data', ondata)
-    parser.on('end', onend)
-    parser.on('error', onerror)
+    parser.once('end', onend)
+    parser.once('error', onerror)
   })
-  let onRequestError = (error) => {
+
+  const onRequestError = (error) => {
     req.removeListener('error', onRequestError)
     const er = util._extend(new Error(), error)
     er.message = 'fanboy: ' + error.message
@@ -384,8 +380,8 @@ FanboyTransform.prototype.request = function (term, keys, cb) {
     req.removeListener('error', onRequestError)
     req.removeListener('end', onRequestEnd)
   }
-  req.on('error', onRequestError)
-  req.on('end', onRequestEnd)
+  req.once('error', onRequestError)
+  req.once('end', onRequestEnd)
 
   req.end()
 }
@@ -430,7 +426,7 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
   resultForID(db, guid, (er, value) => {
     if (er) {
       if (er.notFound) {
-        return this.request(guid, cb)
+        return this._request(guid, cb)
       }
     } else if (value !== undefined) {
       this.use(value)
@@ -439,10 +435,10 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
   })
 }
 
-function Search (db, opts, limit) {
-  if (!(this instanceof Search)) return new Search(db, opts, limit)
+function Search (db, opts) {
+  if (!(this instanceof Search)) return new Search(db, opts)
   if (opts) opts.path = '/search'
-  FanboyTransform.call(this, db, opts, limit)
+  FanboyTransform.call(this, db, opts)
 }
 util.inherits(Search, FanboyTransform)
 
@@ -546,7 +542,7 @@ Search.prototype._transform = function (chunk, enc, cb) {
   this.keysForTerm(term, (er, keys) => {
     if (er) {
       if (er.notFound) {
-        this.request(term, keys, cb)
+        this._request(term, keys, cb)
       } else {
         cb(er)
       }
@@ -557,14 +553,14 @@ Search.prototype._transform = function (chunk, enc, cb) {
 }
 
 // Suggest search terms
-function SearchTerms (db, opts, limit) {
-  if (!(this instanceof SearchTerms)) return new SearchTerms(db, opts, limit)
-  FanboyTransform.call(this, db, opts, limit)
+function SearchTerms (db, opts) {
+  if (!(this instanceof SearchTerms)) return new SearchTerms(db, opts)
+  FanboyTransform.call(this, db, opts)
 }
 util.inherits(SearchTerms, FanboyTransform)
 
-function keyStream (db, term, limit) {
-  return db.createKeyStream(keys.rangeForTerm(term, limit))
+function keyStream (db, term) {
+  return db.createKeyStream(keys.rangeForTerm(term))
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
@@ -573,7 +569,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
   }
 
   const term = this.decode(chunk)
-  const reader = keyStream(this.db, term, this.limit)
+  const reader = keyStream(this.db, term)
 
   const read = () => {
     let chunk

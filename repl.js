@@ -28,7 +28,7 @@ function read (readable, prop) {
   }
 }
 
-const search = svc.search(3)
+const search = svc.search()
 const suggest = svc.suggest()
 const lookup = svc.lookup()
 
