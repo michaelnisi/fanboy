@@ -76,6 +76,8 @@ function sharedState (opts) {
   return opts
 }
 
+// API
+
 function Fanboy (name, opts) {
   if (!(this instanceof Fanboy)) return new Fanboy(name, opts)
   events.EventEmitter.call(this)
@@ -95,9 +97,11 @@ Fanboy.prototype.lookup = function () {
   return new Lookup(this.db, this.opts)
 }
 
-Fanboy.prototype.suggest = function () {
-  return new SearchTerms(this.db, this.opts)
+Fanboy.prototype.suggest = function (limit) {
+  return new SearchTerms(this.db, this.opts, limit)
 }
+
+// --
 
 if (TEST) {
   Fanboy.prototype.close = function (cb) {
@@ -455,6 +459,7 @@ Search.prototype.keysForTerm = function (term, cb) {
     if (!er && !!value) {
       try {
         keys = JSON.parse(value)
+        // The first key is a timestamp, I guess.
         if (isStale(keys.shift(), ttl)) {
           er = new Error('fanboy: stale keys for ' + term)
           er.notFound = true
@@ -519,11 +524,10 @@ Search.prototype.resultsForKeys = function (keys, cb) {
     }
     done(er)
   }
-  s.on('end', onend)
+  s.once('end', onend)
   s.on('error', onerror)
   s.on('readable', read)
   function done (er) {
-    if (!cb) return
     s.removeListener('end', onend)
     s.removeListener('error', onerror)
     s.removeListener('readable', read)
@@ -553,14 +557,15 @@ Search.prototype._transform = function (chunk, enc, cb) {
 }
 
 // Suggest search terms
-function SearchTerms (db, opts) {
-  if (!(this instanceof SearchTerms)) return new SearchTerms(db, opts)
+function SearchTerms (db, opts, limit) {
+  if (!(this instanceof SearchTerms)) return new SearchTerms(db, opts, limit)
   FanboyTransform.call(this, db, opts)
+  this.limit = limit
 }
 util.inherits(SearchTerms, FanboyTransform)
 
-function keyStream (db, term) {
-  return db.createKeyStream(keys.rangeForTerm(term))
+function keyStream (db, term, limit) {
+  return db.createKeyStream(keys.rangeForTerm(term, limit))
 }
 
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
@@ -569,7 +574,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
   }
 
   const term = this.decode(chunk)
-  const reader = keyStream(this.db, term)
+  const reader = keyStream(this.db, term, this.limit)
 
   const read = () => {
     let chunk
@@ -603,8 +608,8 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     cb(er)
   }
 
-  reader.on('end', done)
-  reader.on('error', onerror)
+  reader.once('end', done)
+  reader.once('error', onerror)
   reader.on('readable', read)
 }
 

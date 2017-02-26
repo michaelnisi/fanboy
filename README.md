@@ -85,7 +85,7 @@ You can run this with:
 $ node example/lookup | json
 ```
 
-### Getting suggestions for search terms
+### Obtaining suggestions for search terms
 
 ```js
 const suggest = cache.suggest()
@@ -99,7 +99,11 @@ Try:
 $ node example/suggest | json
 ```
 
-If you have not searched before doing this, you will not get any results, because the suggestions index is populated as we are caching data.
+If you have not searched before doing this, you will not get any results, because the suggestions index is populated as we are caching data. Pass a `Number` to limit the number of suggestions retrieved.
+
+### Limits
+
+The **default limit** of items emitted per term through this API is **50**.
 
 ## Installation
 
