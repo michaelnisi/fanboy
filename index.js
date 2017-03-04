@@ -26,6 +26,8 @@ function guid (obj) {
   return obj
 }
 
+// TODO: Add limit, offset, entity, and attributes to Opts
+
 function Opts (
   cache = { set: nop, get: nop, reset: nop },
   cacheSize = 8 * 1024 * 1024,
@@ -221,11 +223,18 @@ function decorate (obj, path, term) {
   return obj
 }
 
-function mkpath (path, term, media, country) {
-  const obj = path === '/lookup' ? Object.create(null) : {
-    media: media,
-    country: country
-  }
+// TODO: Test mkpath
+
+function mkpath (path, term, media, country, attribute) {
+  const obj = (() => {
+    if (path === '/lookup') return Object.create(null)
+    const o = {
+      media: media,
+      country: country
+    }
+    if (attribute) o.attribute = attribute
+    return o
+  })()
   const q = querystring.stringify(decorate(obj, path, term))
   return [path, q].join('?')
 }
@@ -304,27 +313,33 @@ FanboyTransform.prototype._request = function (term, keys, cb) {
 
   const mod = opts.port === 443 ? https : http
 
-  const req = mod.request(opts, (res) => {
+  const onresponse = (res) => {
     const statusCode = res.statusCode
     debug(statusCode)
 
     if (statusCode !== 200) {
-      res.once('end', () => {
-        const er = new Error('fanboy: unexpected response ' + statusCode)
-        er.statusCode = statusCode
-        er.headers = res.headers
-        util._extend(er, opts)
-        this.emit('error', er)
-        cb()
-      })
-      return res.resume()
+      const er = new Error('fanboy: unexpected response ' + statusCode)
+      er.statusCode = statusCode
+      er.headers = res.headers
+      util._extend(er, opts)
+
+      // We have to consume the response body to free up memory.
+      res.resume()
+
+      // Keeping the stream alive, I can’t remember why exactly.
+      this.emit('error', er)
+
+      return done()
     }
 
+    // Parsing
+
     const parser = parse(res)
+    const results = []
+
     function ondrain () {
       parser.resume()
     }
-    const results = []
     const ondata = (obj) => {
       const result = this.result(obj)
       if (result) {
@@ -340,52 +355,68 @@ FanboyTransform.prototype._request = function (term, keys, cb) {
     const onend = () => {
       if (results.length) {
         put(this.db, term, results, (er) => {
-          done(er)
+          parsed(er)
         })
       } else if (ok) {
         del(this.db, term, (er) => {
           this.cache.set(term, true)
-          done(er)
+          parsed(er)
         })
       } else {
-        done()
+        parsed()
       }
     }
     function onerror (error) {
       ok = false
       const er = new Error('fanboy: parse error: ' + error.message)
-      done(er)
+      parsed(er)
     }
-    const done = (er) => {
-      if (!cb) return
+    const parsed = (er) => {
       this.removeListener('drain', ondrain)
       parser.removeListener('data', ondata)
       parser.removeListener('end', onend)
       parser.removeListener('error', onerror)
-      cb(er)
+      done(er)
     }
+
     parser.on('data', ondata)
     parser.once('end', onend)
     parser.once('error', onerror)
-  })
+  }
 
-  const onRequestError = (error) => {
-    req.removeListener('error', onRequestError)
+  // Requesting
+
+  const req = mod.request(opts, onresponse)
+
+  const done = (er) => {
+    req.removeListener('aborted', onaborted)
+    req.removeListener('error', onerror)
+    req.removeListener('response', onresponse)
+
+    if (er) {
+      if (keys) {
+        er.message = 'fanboy: falling back on cache'
+        this.emit('error', er)
+        return fallback()
+      }
+    }
+
+    if (cb) cb(er)
+  }
+
+  function onaborted () {
+    const er = new Error('fanboy: request aborted')
+    done(er)
+  }
+
+  function onerror (error) {
     const er = util._extend(new Error(), error)
     er.message = 'fanboy: ' + error.message
-    if (keys) {
-      er.message = 'fanboy: falling back on cache ' + er.code
-      this.emit('error', er)
-      return fallback()
-    }
-    cb(er)
+    done(er)
   }
-  function onRequestEnd () {
-    req.removeListener('error', onRequestError)
-    req.removeListener('end', onRequestEnd)
-  }
-  req.once('error', onRequestError)
-  req.once('end', onRequestEnd)
+
+  req.once('aborted', onaborted)
+  req.once('error', onerror)
 
   req.end()
 }
@@ -397,9 +428,8 @@ FanboyTransform.prototype.toString = function () {
 // Lookup item in store
 function Lookup (db, opts) {
   if (!(this instanceof Lookup)) return new Lookup(db, opts)
-  opts = opts || Object.create(null)
-  opts.path = '/lookup'
   FanboyTransform.call(this, db, opts)
+  this.path = '/lookup'
 }
 util.inherits(Lookup, FanboyTransform)
 
@@ -423,8 +453,11 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
   const db = this.db
   const guid = this.decode(chunk)
 
+  debug('looking up: %s', guid)
+
   if (!parseInt(guid, 10)) {
-    return cb(new Error('fanboy: guid ' + guid + ' is not a number'))
+    this.emit('error', new Error('fanboy: guid ' + guid + ' is not a number'))
+    return cb()
   }
 
   resultForID(db, guid, (er, value) => {
@@ -441,8 +474,8 @@ Lookup.prototype._transform = function (chunk, enc, cb) {
 
 function Search (db, opts) {
   if (!(this instanceof Search)) return new Search(db, opts)
-  if (opts) opts.path = '/search'
   FanboyTransform.call(this, db, opts)
+  this.path = '/search'
 }
 util.inherits(Search, FanboyTransform)
 
@@ -536,12 +569,20 @@ Search.prototype.resultsForKeys = function (keys, cb) {
   write()
 }
 
+// TODO: Review term formatting
+//
+// Any URL-encoded text string. Note: URL encoding replaces spaces with the
+// plus (+) character and all characters except the following are encoded:
+// letters, numbers, periods (.), dashes (-), underscores (_), and asterisks
+// (*).
+
 Search.prototype._transform = function (chunk, enc, cb) {
   if (this.db.isClosed()) {
     return cb(new Error('fanboy: database closed'))
   }
 
   const term = this.decode(chunk)
+  debug('searching: %s', term)
 
   this.keysForTerm(term, (er, keys) => {
     if (er) {
@@ -574,6 +615,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
   }
 
   const term = this.decode(chunk)
+  debug('suggesting: %s', term)
   const reader = keyStream(this.db, term, this.limit)
 
   const read = () => {
@@ -621,6 +663,7 @@ if (TEST) {
   exports.isStale = isStale
   exports.keyStream = keyStream
   exports.lookup = Lookup
+  exports.mkpath = mkpath
   exports.nop = nop
   exports.parse = parse
   exports.putOps = putOps
