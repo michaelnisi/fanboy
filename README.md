@@ -38,7 +38,7 @@ The options for the **fanboy** cache:
 
 ## Exports
 
-The **fanboy** module exports a single function that returns a new cache object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`.
+The **fanboy** module exports a single function that returns a new cache object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`. **fanboy** streams do not validate or modify search terms written to them. Be aware that term validation is expected to be dealt with upstream.
 
 ### Creating a new cache
 

@@ -223,8 +223,6 @@ function decorate (obj, path, term) {
   return obj
 }
 
-// TODO: Test mkpath
-
 function mkpath (path, term, media, country, attribute) {
   const obj = (() => {
     if (path === '/lookup') return Object.create(null)
@@ -235,6 +233,11 @@ function mkpath (path, term, media, country, attribute) {
     if (attribute) o.attribute = attribute
     return o
   })()
+
+  // Note: URL encoding replaces spaces with the plus (+) character and all
+  // characters except the following are encoded: letters, numbers, periods
+  // (.), dashes (-), underscores (_), and asterisks (*).
+
   const q = querystring.stringify(decorate(obj, path, term))
   return [path, q].join('?')
 }
@@ -351,13 +354,13 @@ FanboyTransform.prototype._request = function (term, keys, cb) {
         }
       }
     }
-    let ok = true
+    let faulty = false
     const onend = () => {
       if (results.length) {
         put(this.db, term, results, (er) => {
           parsed(er)
         })
-      } else if (ok) {
+      } else if (!faulty) {
         del(this.db, term, (er) => {
           this.cache.set(term, true)
           parsed(er)
@@ -367,7 +370,7 @@ FanboyTransform.prototype._request = function (term, keys, cb) {
       }
     }
     function onerror (error) {
-      ok = false
+      faulty = true
       const er = new Error('fanboy: parse error: ' + error.message)
       parsed(er)
     }
@@ -569,13 +572,6 @@ Search.prototype.resultsForKeys = function (keys, cb) {
   write()
 }
 
-// TODO: Review term formatting
-//
-// Any URL-encoded text string. Note: URL encoding replaces spaces with the
-// plus (+) character and all characters except the following are encoded:
-// letters, numbers, periods (.), dashes (-), underscores (_), and asterisks
-// (*).
-
 Search.prototype._transform = function (chunk, enc, cb) {
   if (this.db.isClosed()) {
     return cb(new Error('fanboy: database closed'))
@@ -616,6 +612,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
 
   const term = this.decode(chunk)
   debug('suggesting: %s', term)
+
   const reader = keyStream(this.db, term, this.limit)
 
   const read = () => {
