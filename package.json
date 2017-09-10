@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "5.0.4",
+  "version": "5.0.5",
   "description": "Cache iTunes search",
   "main": "index.js",
   "directories": {
@@ -21,11 +21,11 @@
     "readable-stream": "^2.2.2"
   },
   "devDependencies": {
-    "nock": "^9.0.2",
-    "rimraf": "^2.5.4",
-    "standard": "^8.6.0",
+    "nock": "^9.0.14",
+    "rimraf": "^2.6.1",
+    "standard": "^10.0.3",
     "stread": "^3.0.1",
-    "tap": "^8.0.1"
+    "tap": "^10.7.2"
   },
   "repository": {
     "type": "git",

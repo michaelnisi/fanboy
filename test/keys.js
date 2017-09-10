@@ -64,7 +64,7 @@ test('trim', (t) => {
     f(' abc def '),
     f(' abc  def '),
     f(123),
-    f(new Buffer('abc'))
+    f(Buffer.from('abc'))
   ]
   wanted.forEach((it) => {
     t.deepEqual(found.shift(), it)

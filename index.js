@@ -128,7 +128,7 @@ function FanboyTransform (db, opts) {
   const sopts = new TransformOpts(opts.highWaterMark)
   stream.Transform.call(this, sopts)
 
-  util._extend(this, opts)
+  Object.assign(this, opts)
 
   this.decoder = new StringDecoder()
   this.state = 0
@@ -324,7 +324,7 @@ FanboyTransform.prototype._request = function (term, keys, cb) {
       const er = new Error('fanboy: unexpected response ' + statusCode)
       er.statusCode = statusCode
       er.headers = res.headers
-      util._extend(er, opts)
+      Object.assign(er, opts)
 
       // We have to consume the response body to free up memory.
       res.resume()
@@ -413,7 +413,7 @@ FanboyTransform.prototype._request = function (term, keys, cb) {
   }
 
   function onerror (error) {
-    const er = util._extend(new Error(), error)
+    const er = Object.assign(new Error(), error)
     er.message = 'fanboy: ' + error.message
     done(er)
   }
