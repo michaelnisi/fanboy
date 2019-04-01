@@ -16,7 +16,7 @@ test('isStale', function (t) {
 test('resOp', function (t) {
   var f = fanboy.resOp
   t.plan(1)
-  t.ok(!!JSON.parse(f({guid: 0}).value).ts)
+  t.ok(!!JSON.parse(f({ guid: 0 }).value).ts)
   t.end()
 })
 
@@ -64,7 +64,7 @@ test('putOps', function (t) {
     { type: 'put', key: keys[2], value: str(results[2]) },
     { type: 'put',
       key: ['fnb', 'trm', 'abc'].join(DIV),
-      value: str([now].concat(keys))}
+      value: str([now].concat(keys)) }
   ]
   var found = fanboy.putOps('abc', results, now)
   t.plan(1)

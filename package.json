@@ -1,20 +1,20 @@
 {
   "name": "fanboy",
-  "version": "5.0.5",
-  "description": "Cache iTunes search",
+  "version": "5.0.6",
+  "description": "Caching iTunes search proxy",
   "main": "index.js",
   "directories": {
     "example": "example",
     "test": "test"
   },
   "scripts": {
-    "pretest": "standard",
+    "pretest": "standard --fix",
     "test": "tap test/*.js --cov",
     "posttest": "rm -rf /tmp/fanboy-[1-9]*"
   },
   "dependencies": {
     "JSONStream": "^1.2.1",
-    "level-random": "^2.0.2",
+    "level-random": "^2.0.3",
     "leveldown": "^1.5.0",
     "levelup": "^1.3.3",
     "lru-cache": "^4.0.1",
@@ -23,9 +23,9 @@
   "devDependencies": {
     "nock": "^9.0.14",
     "rimraf": "^2.6.1",
-    "standard": "^10.0.3",
+    "standard": "^12.0.1",
     "stread": "^3.0.1",
-    "tap": "^10.7.2"
+    "tap": "^12.6.1"
   },
   "repository": {
     "type": "git",
@@ -38,7 +38,7 @@
     "search",
     "api"
   ],
-  "author": "Michael Nisi <michael.nisi@gmail.com> (http://troubled.pro)",
+  "author": "Michael Nisi (https://troubled.pro)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/michaelnisi/fanboy/issues"
