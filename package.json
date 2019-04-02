@@ -13,7 +13,7 @@
     "posttest": "rm -rf /tmp/fanboy-[1-9]*"
   },
   "dependencies": {
-    "JSONStream": "^1.2.1",
+    "JSONStream": "^1.3.5",
     "level-random": "^2.0.3",
     "leveldown": "^1.5.0",
     "levelup": "^1.3.3",

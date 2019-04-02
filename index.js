@@ -26,8 +26,6 @@ function guid (obj) {
   return obj
 }
 
-// TODO: Add limit, offset, entity, and attributes to Opts
-
 function Opts (
   cache = { set: nop, get: nop, reset: nop },
   cacheSize = 8 * 1024 * 1024,

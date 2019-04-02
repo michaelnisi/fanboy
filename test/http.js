@@ -1,64 +1,111 @@
 'use strict'
 
-var common = require('./lib/common')
-var nock = require('nock')
-var test = require('tap').test
+const common = require('./lib/common')
+const http = require('http')
+const test = require('tap').test
+const { URL } = require('url')
 
 function codesBetween (smaller, larger) {
-  var codes = []
-  while (smaller < larger) {
+  let codes = []
+
+  while (smaller <= larger) {
     codes.push(smaller++)
   }
+
   return codes
 }
 
-function run (t, codes) {
-  var code = codes.shift()
-  if (!code) {
-    return t.end()
+function createHeaders () {
+  return {
+    'content-type': 'text/javascript; charset=utf-8'
   }
-  var scope = nock('http://itunes.apple.com')
-    .get('/search?media=podcast&country=us&term=apple')
-    .reply(code)
-  var cache = common.freshCache()
-  var f = cache.search()
-  var buf = ''
-  f.on('data', function (chunk) {
-    buf += chunk
-  })
-  f.on('end', function (er) {
-    var wanted = []
-    var found = JSON.parse(buf)
-    t.same(wanted, found)
-    t.ok(scope.isDone())
-    common.teardown(cache, function () {
-      t.pass('should teardown')
-      run(t, codes)
-    })
-  })
-  f.on('error', function (er) {
-    t.pass('should error')
-  })
-  f.end('apple')
-  f.resume()
 }
 
-test('1xx', { skip: false }, function (t) {
-  var codes = codesBetween(100, 110)
-  run(t, codes)
+function createURL (input = '/search?media=podcast&country=us&term=apple') {
+  return new URL(input, 'http://localhost:1337')
+}
+
+// Arbitrary HTTP status codes should not hang the stream.
+function run (codes, t) {
+  const { hostname, port } = createURL()
+  const headers = createHeaders()
+
+  const fixtures = codes.map((code) => {
+    return (req, res) => {
+      t.same(createURL(req.url), createURL())
+      res.writeHead(code, headers)
+      res.end()
+    }
+  })
+
+  const server = http.createServer((req, res) => {
+    fixtures.shift()(req, res)
+  }).listen(port, hostname, er => {
+    if (er) throw er
+    t.pass(`should listen on ${port}`)
+    go()
+  })
+
+  const go = () => {
+    let code = codes.shift()
+
+    if (!code) {
+      return server.close(er => {
+        if (er) throw er
+        t.end()
+      })
+    }
+
+    const cache = common.freshCache(null, hostname, port)
+    const f = cache.search()
+    let chunks = []
+
+    f.on('data', chunk => {
+      chunks.push(chunk)
+    })
+
+    let errorEmitted = false
+
+    f.on('end', er => {
+      let wanted = []
+      let found = JSON.parse(Buffer.concat(chunks).toString())
+
+      t.same(wanted, found)
+      t.ok(errorEmitted)
+
+      common.teardown(cache, () => {
+        t.pass('should teardown')
+        go(codes, t)
+      })
+    })
+
+    f.on('error', er => {
+      if (code === 100) {
+        t.is(er.code, 'ECONNRESET')
+      } else {
+        t.is(er.statusCode, code, `${er}`)
+      }
+
+      errorEmitted = true
+    })
+
+    f.resume()
+    f.end('apple')
+  }
+}
+
+test('1xx', t => {
+  run(codesBetween(100, 103), t)
 })
 
-test('3xx', { skip: false }, function (t) {
-  var codes = codesBetween(300, 310)
-  run(t, codes)
+test('3xx', t => {
+  run(codesBetween(300, 310), t)
 })
 
-test('4xx', { skip: false }, function (t) {
-  var codes = codesBetween(400, 430)
-  run(t, codes)
+test('4xx', t => {
+  run(codesBetween(400, 430), t)
 })
 
-test('5xx', { skip: false }, function (t) {
-  var codes = codesBetween(500, 510)
-  run(t, codes)
+test('5xx', t => {
+  run(codesBetween(500, 510), t)
 })

@@ -6,14 +6,15 @@ exports.teardown = teardown
 const fanboy = require('../../')
 const rimraf = require('rimraf')
 
-function freshCache (highWaterMark) {
+function freshCache (highWaterMark, hostname, port) {
   const name = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
   const opts = {
     highWaterMark: highWaterMark || Math.round(Math.random() * 16),
-    media: 'podcast'
+    hostname: hostname,
+    media: 'podcast',
+    port: port
   }
-  const cache = fanboy(name, opts)
-  return cache
+  return fanboy(name, opts)
 }
 
 function teardown (cache, cb) {
