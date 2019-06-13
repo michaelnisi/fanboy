@@ -2,7 +2,6 @@
 
 exports = module.exports = Fanboy
 
-const JSONStream = require('JSONStream')
 const StringDecoder = require('string_decoder').StringDecoder
 const events = require('events')
 const http = require('http')
@@ -11,6 +10,8 @@ const lru = require('lru-cache')
 const querystring = require('querystring')
 const stream = require('readable-stream')
 const util = require('util')
+
+const { createResultsParser } = require('./lib/json')
 
 const {
   createDatabase,
@@ -225,23 +226,6 @@ FanboyTransform.prototype.reqOpts = function (term) {
   return new ReqOpts(this.hostname, true, this.port, 'GET', p)
 }
 
-function parse (readable) {
-  const parser = JSONStream.parse('results.*')
-  function onerror (er) {
-    debug(er)
-    parser.end()
-    onend()
-  }
-  function onend () {
-    parser.removeListener('end', onend)
-    parser.removeListener('error', onerror)
-    readable.unpipe()
-  }
-  parser.on('end', onend)
-  parser.on('error', onerror)
-  return readable.pipe(parser)
-}
-
 // Request lookup iTunes ID or search for term. Optional `keys` are used as
 // fallback.
 //
@@ -303,7 +287,7 @@ FanboyTransform.prototype._request = function (term, keys, cb) {
 
     // Parsing
 
-    const parser = parse(res)
+    const parser = createResultsParser(res)
     const results = []
 
     function ondrain () {
@@ -586,7 +570,7 @@ if (TEST) {
   exports.lookup = Lookup
   exports.mkpath = mkpath
   exports.nop = nop
-  exports.parse = parse
+  exports.parse = createResultsParser
   exports.putOps = putOps
   exports.resOp = resOp
   exports.search = Search
