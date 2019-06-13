@@ -3,13 +3,14 @@
 var fanboy = require('../')
 var test = require('tap').test
 
+const { isStale } = require('../lib/level')
+
 var DIV = '\udbff\udfff'
 
 test('isStale', function (t) {
-  var f = fanboy.isStale
-  t.ok(!f(Date.now(), 1), 'should not be stale')
-  t.ok(!f(Date.now() - 1, 1), 'should not be stale')
-  t.ok(f(Date.now() - 2, 1), 'should be stale')
+  t.ok(!isStale(Date.now(), 1), 'should not be stale')
+  t.ok(!isStale(Date.now() - 0.9, 1), 'should not be stale')
+  t.ok(isStale(Date.now() - 2, 1), 'should be stale')
   t.end()
 })
 
