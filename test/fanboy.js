@@ -2,12 +2,13 @@
 
 const fanboy = require('../')
 const test = require('tap').test
+const { nop } = require('../lib/stream')
 
 test('defaults', (t) => {
   const f = fanboy.defaults
   t.ok(!!f())
   const wanted = {
-    cache: { get: fanboy.nop, set: fanboy.nop, reset: fanboy.nop },
+    cache: { get: nop, set: nop, reset: nop },
     cacheSize: 8388608,
     country: 'us',
     highWaterMark: undefined,
