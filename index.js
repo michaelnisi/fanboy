@@ -11,22 +11,9 @@ const { Search } = require('./lib/search')
 const { SearchTerms } = require('./lib/suggest')
 const { Lookup } = require('./lib/lookup')
 const { createResultsParser } = require('./lib/http')
-
-const {
-  createDatabase,
-  close,
-  isStale,
-  keyStream,
-  termOp,
-  resOp,
-  putOps
-} = require('./lib/level')
+const { createDatabase } = require('./lib/level')
 
 const debug = util.debuglog('fanboy')
-
-const TEST = process.mainModule.filename.match(/test/) !== null
-
-function nop () {}
 
 function sharedState (opts) {
   opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
@@ -56,15 +43,24 @@ Fanboy.prototype.suggest = function (limit) {
   return new SearchTerms(this.db, this.opts, limit)
 }
 
-// --
+// TEST
+
+const TEST = process.mainModule.filename.match(/test/) !== null
 
 if (TEST) {
+  const {
+    close,
+    isStale,
+    keyStream,
+    termOp,
+    resOp,
+    putOps
+  } = require('./lib/level')
+
   Fanboy.prototype.close = function (cb) {
     close(this.db, cb)
   }
-}
 
-if (TEST) {
   exports.base = FanboyTransform
   exports.debug = debug
   exports.defaults = defaults
@@ -73,7 +69,7 @@ if (TEST) {
   exports.keyStream = keyStream
   exports.lookup = Lookup
   exports.mkpath = mkpath
-  exports.nop = nop
+  exports.nop = () => {}
   exports.parse = createResultsParser
   exports.putOps = putOps
   exports.resOp = resOp
