@@ -7,13 +7,26 @@ const StringDecoder = require('string_decoder').StringDecoder
 const events = require('events')
 const http = require('http')
 const https = require('https')
-const keys = require('./lib/keys')
-const levelup = require('levelup')
-const lr = require('level-random')
 const lru = require('lru-cache')
 const querystring = require('querystring')
 const stream = require('readable-stream')
 const util = require('util')
+
+const {
+  createDatabase,
+  close,
+  del,
+  put,
+  resultForID,
+  keysForTerm,
+  isStale,
+  keyStream,
+  createLevelRandom,
+  termFromKey,
+  termOp,
+  resOp,
+  putOps
+} = require('./lib/level')
 
 const debug = util.debuglog('fanboy')
 
@@ -82,9 +95,7 @@ function Fanboy (name, opts) {
   if (!(this instanceof Fanboy)) return new Fanboy(name, opts)
   events.EventEmitter.call(this)
   opts = defaults(opts)
-  this.db = levelup(name, {
-    cacheSize: opts.cacheSize
-  })
+  this.db = createDatabase(name, opts.cacheSize)
   this.opts = sharedState(opts)
 }
 util.inherits(Fanboy, events.EventEmitter)
@@ -105,7 +116,7 @@ Fanboy.prototype.suggest = function (limit) {
 
 if (TEST) {
   Fanboy.prototype.close = function (cb) {
-    this.db.close(cb)
+    close(this.db, cb)
   }
 }
 
@@ -170,49 +181,6 @@ FanboyTransform.prototype._flush = function (cb) {
   }
   this.deinit()
   cb()
-}
-
-// Bulk-write operation
-function Bulk (type, key, value) {
-  this.type = type
-  this.key = key
-  this.value = value
-}
-
-function termOp (term, kees, now = Date.now()) {
-  const k = keys.termKey(term)
-  const v = JSON.stringify([now].concat(kees))
-  return new Bulk('put', k, v)
-}
-
-function resOp (result, now = Date.now()) {
-  result.ts = now
-  const k = keys.resKey(result.guid)
-  const v = JSON.stringify(result)
-  return new Bulk('put', k, v)
-}
-
-function putOps (term, results, now) {
-  const ops = []
-  const keys = results.map((result) => {
-    const op = resOp(result, now)
-    ops.push(op)
-    return op.key
-  })
-  ops.push(termOp(term, keys, now))
-  return ops
-}
-
-function put (db, term, results, cb) {
-  if (results && results.length) {
-    db.batch(putOps(term, results), cb)
-  } else {
-    cb(new Error('fanboy: cannot store empty results'))
-  }
-}
-
-function del (db, term, cb) {
-  db.del(keys.termKey(term), cb)
 }
 
 const verbs = { '/search': 'term', '/lookup': 'id' }
@@ -434,17 +402,6 @@ function Lookup (db, opts) {
 }
 util.inherits(Lookup, FanboyTransform)
 
-// The result as JSON string
-// - db levelup()
-// - id the iTunes ID
-// - cb cb(er, value)
-function resultForID (db, id, cb) {
-  const key = keys.resKey(id)
-  db.get(key, (er, value) => {
-    cb(er, value)
-  })
-}
-
 // - chunk iTunes ID (e.g. '537879700')
 Lookup.prototype._transform = function (chunk, enc, cb) {
   if (this.db.isClosed()) {
@@ -480,40 +437,13 @@ function Search (db, opts) {
 }
 util.inherits(Search, FanboyTransform)
 
-function isStale (time, ttl) {
-  return Date.now() - time > ttl
-}
-
 Search.prototype.keysForTerm = function (term, cb) {
-  const ttl = this.ttl
-  const key = keys.termKey(term)
-
-  this.db.get(key, (er, value) => {
-    let keys
-    if (!er && !!value) {
-      try {
-        keys = JSON.parse(value)
-        // The first key is a timestamp, I guess.
-        if (isStale(keys.shift(), ttl)) {
-          er = new Error('fanboy: stale keys for ' + term)
-          er.notFound = true
-        }
-      } catch (ex) {
-        er = ex
-      }
-    }
-    cb(er, keys)
-  })
-}
-
-function LROpts (db) {
-  this.db = db
-  this.fillCache = true
-  this.errorIfNotExists = true
+  keysForTerm(this.db, term, this.ttl, cb)
 }
 
 Search.prototype.resultsForKeys = function (keys, cb) {
-  const s = lr(new LROpts(this.db))
+  const s = createLevelRandom(this.db)
+
   let read = () => {
     if (this._writableState.needDrain) return
     let ok = true
@@ -599,10 +529,6 @@ function SearchTerms (db, opts, limit) {
 }
 util.inherits(SearchTerms, FanboyTransform)
 
-function keyStream (db, term, limit) {
-  return db.createKeyStream(keys.rangeForTerm(term, limit))
-}
-
 SearchTerms.prototype._transform = function (chunk, enc, cb) {
   if (this.db.isClosed()) {
     return cb(new Error('fanboy: database closed'))
@@ -621,7 +547,7 @@ SearchTerms.prototype._transform = function (chunk, enc, cb) {
     do {
       chunk = reader.read()
       if (chunk) {
-        sug = keys.termFromKey(chunk)
+        sug = termFromKey(chunk)
         ok = this.use('"' + sug + '"')
       }
     } while (chunk && ok)
