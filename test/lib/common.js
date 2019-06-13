@@ -3,7 +3,7 @@
 exports.freshCache = freshCache
 exports.teardown = teardown
 
-const fanboy = require('../../')
+const { Fanboy } = require('../../')
 const rimraf = require('rimraf')
 
 function freshCache (highWaterMark, hostname, port) {
@@ -14,7 +14,7 @@ function freshCache (highWaterMark, hostname, port) {
     media: 'podcast',
     port: port
   }
-  return fanboy(name, opts)
+  return new Fanboy(name, opts)
 }
 
 function teardown (cache, cb) {

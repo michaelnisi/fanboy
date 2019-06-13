@@ -1,6 +1,6 @@
 {
   "name": "fanboy",
-  "version": "5.0.6",
+  "version": "6.0.0",
   "description": "Caching iTunes search proxy",
   "main": "index.js",
   "directories": {
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "pretest": "standard --fix",
-    "test": "tap test/*.js -j1 --cov",
+    "test": "tap test/*.js -b -j1 --cov",
     "posttest": "rm -rf /tmp/fanboy-[1-9]*"
   },
   "dependencies": {
@@ -45,6 +45,6 @@
   },
   "homepage": "https://github.com/michaelnisi/fanboy",
   "engines": {
-    "node": ">=6"
+    "node": ">=8"
   }
 }

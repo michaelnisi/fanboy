@@ -1,8 +1,6 @@
 'use strict'
 
-exports = module.exports = Fanboy
-
-const events = require('events')
+const { EventEmitter } = require('events')
 const lru = require('lru-cache')
 const util = require('util')
 
@@ -15,33 +13,37 @@ const { createDatabase } = require('./lib/level')
 
 const debug = util.debuglog('fanboy')
 
-function sharedState (opts) {
-  opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
-  return opts
-}
-
 // API
 
-function Fanboy (name, opts) {
-  if (!(this instanceof Fanboy)) return new Fanboy(name, opts)
-  events.EventEmitter.call(this)
-  opts = defaults(opts)
-  this.db = createDatabase(name, opts.cacheSize)
-  this.opts = sharedState(opts)
-}
-util.inherits(Fanboy, events.EventEmitter)
+class Fanboy extends EventEmitter {
+  static sharedState (opts) {
+    opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
+    return opts
+  }
 
-Fanboy.prototype.search = function () {
-  return new Search(this.db, this.opts)
+  constructor (name, opts) {
+    super()
+
+    opts = defaults(opts)
+
+    this.db = createDatabase(name, opts.cacheSize)
+    this.opts = Fanboy.sharedState(opts)
+  }
+
+  search () {
+    return new Search(this.db, this.opts)
+  }
+
+  lookup () {
+    return new Lookup(this.db, this.opts)
+  }
+
+  suggest (limit) {
+    return new SearchTerms(this.db, this.opts, limit)
+  }
 }
 
-Fanboy.prototype.lookup = function () {
-  return new Lookup(this.db, this.opts)
-}
-
-Fanboy.prototype.suggest = function (limit) {
-  return new SearchTerms(this.db, this.opts, limit)
-}
+exports.Fanboy = Fanboy
 
 // TEST
 
