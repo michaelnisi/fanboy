@@ -1,8 +1,7 @@
 'use strict'
 
-const lru = require('lru-cache')
-const util = require('util')
-
+const LRU = require('lru-cache')
+const { debuglog } = require('util')
 const { FanboyTransform, defaults, mkpath, guid } = require('./lib/stream')
 const { Search } = require('./lib/search')
 const { SearchTerms } = require('./lib/suggest')
@@ -10,13 +9,13 @@ const { Lookup } = require('./lib/lookup')
 const { createResultsParser } = require('./lib/http')
 const { createDatabase } = require('./lib/level')
 
-const debug = util.debuglog('fanboy')
+const debug = debuglog('fanboy')
 
 // API
 
 class Fanboy {
   static sharedState (opts) {
-    opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
+    opts.cache = new LRU({ maxAge: opts.ttl, max: opts.max })
 
     return opts
   }
