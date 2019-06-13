@@ -1,6 +1,5 @@
 'use strict'
 
-const { EventEmitter } = require('events')
 const lru = require('lru-cache')
 const util = require('util')
 
@@ -15,16 +14,15 @@ const debug = util.debuglog('fanboy')
 
 // API
 
-class Fanboy extends EventEmitter {
+class Fanboy {
   static sharedState (opts) {
     opts.cache = lru({ maxAge: opts.ttl, max: opts.max })
+
     return opts
   }
 
   // Creates a new iTunes client, caching with the database located at `name`.
   constructor (name, opts) {
-    super()
-
     opts = defaults(opts)
 
     this.db = createDatabase(name, opts.cacheSize)
