@@ -4,20 +4,16 @@ exports = module.exports = Fanboy
 
 const StringDecoder = require('string_decoder').StringDecoder
 const events = require('events')
-const http = require('http')
-const https = require('https')
 const lru = require('lru-cache')
-const querystring = require('querystring')
 const stream = require('readable-stream')
 const util = require('util')
+const querystring = require('querystring')
 
-const { createResultsParser } = require('./lib/json')
+const { request, createResultsParser } = require('./lib/http')
 
 const {
   createDatabase,
   close,
-  del,
-  put,
   resultForID,
   keysForTerm,
   isStale,
@@ -232,146 +228,7 @@ FanboyTransform.prototype.reqOpts = function (term) {
 // - term String iTunes ID or search term.
 // - keys [String] Array of cached keys (optional).
 FanboyTransform.prototype._request = function (term, keys, cb) {
-  if (typeof keys === 'function') {
-    cb = keys
-    keys = null
-  }
-
-  const skip = () => {
-    const y = this.cache.has(term)
-    if (y) debug('skipping: %s', term)
-    return y
-  }
-
-  if (skip()) {
-    return cb()
-  }
-
-  const opts = this.reqOpts(term)
-  debug(opts)
-
-  const fallback = () => {
-    debug('falling back')
-    if (skip()) return cb()
-    if (keys) {
-      return this.resultsForKeys(keys, cb)
-    }
-    this.keysForTerm(term, (er, keys) => {
-      if (er) {
-        return cb(er.notFound ? null : er)
-      }
-      this.resultsForKeys(keys, cb)
-    })
-  }
-
-  const mod = opts.port === 443 ? https : http
-
-  const onresponse = (res) => {
-    const statusCode = res.statusCode
-    debug(statusCode)
-
-    if (statusCode !== 200) {
-      const er = new Error('fanboy: unexpected response ' + statusCode)
-      er.statusCode = statusCode
-      er.headers = res.headers
-      Object.assign(er, opts)
-
-      // We have to consume the response body to free up memory.
-      res.resume()
-
-      // Keeping the stream alive, I can’t remember why exactly.
-      this.emit('error', er)
-
-      return done()
-    }
-
-    // Parsing
-
-    const parser = createResultsParser(res)
-    const results = []
-
-    function ondrain () {
-      parser.resume()
-    }
-    const ondata = (obj) => {
-      const result = this.result(obj)
-      if (result) {
-        results.push(result)
-        const chunk = JSON.stringify(result)
-        if (!this.use(chunk)) {
-          parser.pause()
-          this.once('drain', ondrain)
-        }
-      }
-    }
-    let faulty = false
-    const onend = () => {
-      if (results.length) {
-        put(this.db, term, results, (er) => {
-          parsed(er)
-        })
-      } else if (!faulty) {
-        del(this.db, term, (er) => {
-          this.cache.set(term, true)
-          parsed(er)
-        })
-      } else {
-        parsed()
-      }
-    }
-    function onerror (error) {
-      faulty = true
-      const er = new Error('fanboy: parse error: ' + error.message)
-      parsed(er)
-    }
-    const parsed = (er) => {
-      this.removeListener('drain', ondrain)
-      parser.removeListener('data', ondata)
-      parser.removeListener('end', onend)
-      parser.removeListener('error', onerror)
-      done(er)
-    }
-
-    parser.on('data', ondata)
-    parser.once('end', onend)
-    parser.once('error', onerror)
-  }
-
-  // Requesting
-
-  const req = mod.request(opts, onresponse)
-
-  const done = (er) => {
-    req.removeListener('aborted', onaborted)
-    req.removeListener('error', onerror)
-    req.removeListener('response', onresponse)
-
-    if (er) {
-      if (keys) {
-        er.message = 'fanboy: falling back on cache'
-        this.emit('error', er)
-        return fallback()
-      }
-    }
-
-    if (cb) cb(er)
-  }
-
-  function onaborted () {
-    const er = new Error('fanboy: request aborted')
-    done(er)
-  }
-
-  function onerror (error) {
-    const er = Object.assign(new Error(), error)
-    er.message = 'fanboy: ' + error.message
-    done(er)
-  }
-
-  req.once('aborted', onaborted)
-  req.once('error', onerror)
-
-  req.end()
+  request(term, keys, this, cb)
 }
 
 FanboyTransform.prototype.toString = function () {
