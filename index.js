@@ -21,6 +21,7 @@ class Fanboy extends EventEmitter {
     return opts
   }
 
+  // Creates a new iTunes client, caching with the database located at `name`.
   constructor (name, opts) {
     super()
 
@@ -30,14 +31,17 @@ class Fanboy extends EventEmitter {
     this.opts = Fanboy.sharedState(opts)
   }
 
+  // Returns a new search stream.
   search () {
     return new Search(this.db, this.opts)
   }
 
+  // Returns a new lookup stream.
   lookup () {
     return new Lookup(this.db, this.opts)
   }
 
+  // Returns a new suggest stream respecting result `limit`.
   suggest (limit) {
     return new SearchTerms(this.db, this.opts, limit)
   }
