@@ -14,7 +14,7 @@ const debug = debuglog('fanboy')
 // API
 
 class Fanboy {
-  static sharedState (opts) {
+  static createState (opts) {
     opts.cache = new LRU({ maxAge: opts.ttl, max: opts.max })
 
     return opts
@@ -25,22 +25,22 @@ class Fanboy {
     opts = defaults(opts)
 
     this.db = createDatabase(name, opts.cacheSize)
-    this.opts = Fanboy.sharedState(opts)
+    this.state = Fanboy.createState(opts)
   }
 
   // Returns a new search stream.
   search () {
-    return new Search(this.db, this.opts)
+    return new Search(this.db, this.state)
   }
 
   // Returns a new lookup stream.
   lookup () {
-    return new Lookup(this.db, this.opts)
+    return new Lookup(this.db, this.state)
   }
 
   // Returns a new suggest stream respecting result `limit`.
   suggest (limit) {
-    return new SearchTerms(this.db, this.opts, limit)
+    return new SearchTerms(this.db, this.state, limit)
   }
 }
 
