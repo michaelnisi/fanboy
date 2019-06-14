@@ -25,7 +25,7 @@ The default callback adds the required `guid` property to `obj` and returns it. 
 
 The options for the **fanboy** cache:
 
-- `cacheSize = 1024 * 1024 * 8` The cache size passed to [`levelup`](https://github.com/Level/levelup).
+- `cacheSize = 1024 * 1024 * 8` The *leveldown* in-memory LRU cache size.
 - `country = 'us'` The country code for the search API.
 - `highWaterMark` `Number` Passed to `stream.Readable` constructor.
 - `hostname = 'itunes.apple.com'` The host name of the store.
@@ -38,11 +38,11 @@ The options for the **fanboy** cache:
 
 ## Exports
 
-The **fanboy** module exports a single function that returns a new cache object (an instance of the `Fanboy` class). To access the `Fanboy` class `require('fanboy')`. **fanboy** streams do not validate or modify search terms written to them. Be aware that term validation is expected to be dealt with upstream.
+The **fanboy** module exports the `Fanboy` class, a stateful cache object with a persistent [LevelDB](https://github.com/Level/leveldown/) cache and some additional in-memory caching. To access the `Fanboy` class `require('fanboy')`. **fanboy** streams do not validate or modify search terms written to them. Be aware that term validation is expected to be dealt with upstream.
 
 ### Creating a new cache
 
-`fanboy(name, opts)`
+`Fanboy(name, opts)`
 
 - `name` `String` The name of the file system directory for the database.
 - `opts` `opts()` Optional parameters of the cache.
