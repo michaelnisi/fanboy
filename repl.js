@@ -3,7 +3,7 @@
 // A REPL to explore the fanboy API. Also, this can be helpful while debugging:
 // $ NODE_DEBUG=fanboy ./repl.js
 
-const fanboy = require('./')
+const { Fanboy } = require('./')
 const repl = require('repl')
 const util = require('util')
 
@@ -14,7 +14,7 @@ const ctx = repl.start({
   output: process.stdout
 }).context
 
-const svc = fanboy('/tmp/fanboy-repl.db', {
+const svc = new Fanboy('/tmp/fanboy-repl.db', {
   media: 'podcast',
   objectMode: true
 })

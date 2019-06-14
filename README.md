@@ -38,7 +38,7 @@ The options for the **fanboy** cache:
 
 ## Exports
 
-The **fanboy** module exports the `Fanboy` class, a stateful cache object with a persistent [LevelDB](https://github.com/Level/leveldown/) cache and some additional in-memory caching. To access the `Fanboy` class `require('fanboy')`. **fanboy** streams do not validate or modify search terms written to them. Be aware that term validation is expected to be dealt with upstream.
+The **fanboy** module exports the `Fanboy` class, a stateful cache object with a persistent [LevelDB](https://github.com/Level/leveldown/) cache and some additional in-memory caching. To access the `Fanboy` class `require('fanboy')`. **fanboy** streams do not validate or modify search terms written to them. Be aware that term validation is expected to be dealt with upstream. The streams in this package are designed for flowing mode. They work best if you consume their data quickly. Experiment with low `highWaterMark` values, but note it may affect outward request processing. All data gets streamed.
 
 ### Creating a new cache
 

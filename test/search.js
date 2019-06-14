@@ -26,35 +26,73 @@ test('flowing mode', { skip: false }, function (t) {
   f.on('data', function (chunk) {
     buf += chunk
   })
-  f.on('end', function () {
+  f.on('end', () => {
     var items = JSON.parse(buf)
     t.is(items.length, 13)
     t.ok(scope.isDone())
-    common.teardown(cache, function () {
+    common.teardown(cache, () => {
       t.pass('should teardown')
     })
   })
 })
 
-test('read', { skip: false }, function (t) {
+test('flowing with limited buffering', t => {
   t.plan(3)
-  var scope = nock('http://itunes.apple.com')
+
+  const scope = nock('http://itunes.apple.com')
+
   stream(scope, 'apple')
-  var cache = common.freshCache(0)
-  var f = cache.search()
-  var buf = ''
+
+  const cache = common.freshCache(4096)
+  const f = cache.search()
+
+  let chunks = []
+
   f.end('apple')
-  f.on('readable', function () {
-    var chunk
-    while ((chunk = f.read())) {
-      buf += chunk
-    }
+
+  f.on('data', (chunk) => {
+    chunks.push(chunk)
   })
-  f.on('end', function () {
-    var items = JSON.parse(buf)
+
+  f.on('end', () => {
+    const payload = Buffer.concat(chunks)
+    const items = JSON.parse(payload)
+
     t.is(items.length, 50)
     t.ok(scope.isDone())
-    common.teardown(cache, function () {
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+    })
+  })
+})
+
+test('flowing without buffering', t => {
+  t.plan(3)
+
+  const scope = nock('http://itunes.apple.com')
+
+  stream(scope, 'apple')
+
+  const cache = common.freshCache(0)
+  const f = cache.search()
+
+  let chunks = []
+
+  f.end('apple')
+
+  f.on('data', (chunk) => {
+    chunks.push(chunk)
+  })
+
+  f.on('end', () => {
+    const payload = Buffer.concat(chunks)
+    const items = JSON.parse(payload)
+
+    t.is(items.length, 50)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
       t.pass('should teardown')
     })
   })
@@ -67,7 +105,7 @@ test('not found', { skip: false }, function (t) {
   f.keysForTerm('abc', function (er, keys) {
     t.ok(er.notFound, 'should error not found')
     t.is(keys, undefined)
-    common.teardown(cache, function () {
+    common.teardown(cache, () => {
       t.pass('should teardown')
     })
   })
@@ -91,7 +129,7 @@ test('no results', { skip: false }, function (t) {
     var found = JSON.parse(buf)
     t.same(wanted, found)
     t.ok(scope.isDone())
-    common.teardown(cache, function () {
+    common.teardown(cache, () => {
       t.pass('should teardown')
     })
   })

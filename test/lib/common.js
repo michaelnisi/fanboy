@@ -9,7 +9,7 @@ const rimraf = require('rimraf')
 function freshCache (highWaterMark, hostname, port) {
   const name = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
   const opts = {
-    highWaterMark: highWaterMark || Math.round(Math.random() * 16),
+    highWaterMark: highWaterMark,
     hostname: hostname,
     media: 'podcast',
     port: port
