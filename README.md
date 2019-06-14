@@ -48,9 +48,9 @@ The **fanboy** module exports a single function that returns a new cache object 
 - `opts` `opts()` Optional parameters of the cache.
 
 ```js
-const fanboy = require('fanboy')
+const { Fanboy } = require('fanboy')
 
-const cache = fanboy('/tmp/fanboy.db', {
+const cache = new Fanboy('/tmp/fanboy.db', {
   media: 'podcast'
 })
 ```

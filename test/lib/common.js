@@ -14,15 +14,19 @@ function freshCache (highWaterMark, hostname, port) {
     media: 'podcast',
     port: port
   }
+
   return new Fanboy(name, opts)
 }
 
 function teardown (cache, cb) {
-  const db = cache.db
+  const { db } = cache
+
   db.close((er) => {
     if (er) throw er
-    const name = db.location
-    rimraf(name, (er) => {
+
+    const { _db: { db: { location } } } = db
+
+    rimraf(location, (er) => {
       if (er) throw er
       cb()
     })
