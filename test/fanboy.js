@@ -2,28 +2,6 @@
 
 const fanboy = require('../')
 const test = require('tap').test
-const { nop } = require('../lib/stream')
-
-test('defaults', (t) => {
-  const f = fanboy.defaults
-  t.ok(!!f())
-  const wanted = {
-    cache: { get: nop, set: nop, reset: nop },
-    cacheSize: 8388608,
-    country: 'us',
-    highWaterMark: undefined,
-    hostname: 'itunes.apple.com',
-    max: 500,
-    media: 'all',
-    objectMode: false,
-    path: '/search',
-    port: 80,
-    result: fanboy.guid,
-    ttl: 86400000
-  }
-  t.deepEquals(f(), wanted)
-  t.end()
-})
 
 test('Lookup', (t) => {
   const f = fanboy.lookup

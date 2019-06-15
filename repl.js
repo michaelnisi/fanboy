@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-// A REPL to explore the fanboy API. Also, this can be helpful while debugging:
+// A REPL to explore the fanboy API, helpful for debugging:
 // $ NODE_DEBUG=fanboy ./repl.js
 
 const { Fanboy } = require('./')
 const repl = require('repl')
-const util = require('util')
+const { inspect } = require('util')
 
 const ctx = repl.start({
   prompt: 'fanboy> ',
@@ -19,12 +19,15 @@ const svc = new Fanboy('/tmp/fanboy-repl.db', {
   objectMode: true
 })
 
-// This needs to buffer, of course.
+function format (obj, prop) {
+  return inspect(prop ? obj[prop] : obj, { colors: true })
+}
+
+// Needs to buffer, of course. This is not how you should be using streams.
 function read (readable, prop) {
   let obj
   while ((obj = readable.read()) !== null) {
-    console.log(util.inspect(
-      prop ? obj[prop] : obj, { colors: true }))
+    console.log(format(obj, prop))
   }
 }
 
