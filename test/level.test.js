@@ -8,7 +8,6 @@ var DIV = '\udbff\udfff'
 
 test('isStale', function (t) {
   t.ok(!isStale(Date.now(), 1), 'should not be stale')
-  t.ok(!isStale(Date.now() - 0.9, 1), 'should not be stale')
   t.ok(isStale(Date.now() - 2, 1), 'should be stale')
   t.end()
 })
