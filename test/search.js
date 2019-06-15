@@ -1,10 +1,24 @@
 'use strict'
 
-var common = require('./lib/common')
-var fs = require('fs')
-var nock = require('nock')
-var path = require('path')
-var test = require('tap').test
+const common = require('./lib/common')
+const fs = require('fs')
+const nock = require('nock')
+const path = require('path')
+const { test } = require('tap')
+const { Search } = require('../lib/search')
+const { FanboyTransform } = require('../lib/stream')
+
+test('internals', (t) => {
+  const it = new Search()
+
+  t.ok(it instanceof FanboyTransform)
+  t.ok(it instanceof Search)
+  t.is(it.toString(), 'fanboy: Search')
+  t.is(it.path, '/search')
+  t.is(typeof it._request, 'function')
+
+  t.end()
+})
 
 function stream (scope, term) {
   scope.get('/search?media=podcast&country=us&term=' + term).reply(200,
@@ -15,7 +29,7 @@ function stream (scope, term) {
   )
 }
 
-test('flowing mode', { skip: false }, function (t) {
+test('flowing mode', t => {
   t.plan(3)
   var scope = nock('http://itunes.apple.com')
   stream(scope, 'gruber')
@@ -98,7 +112,7 @@ test('flowing without buffering', t => {
   })
 })
 
-test('not found', { skip: false }, function (t) {
+test('not found', t => {
   t.plan(3)
   var cache = common.freshCache()
   var f = cache.search()
@@ -111,7 +125,7 @@ test('not found', { skip: false }, function (t) {
   })
 })
 
-test('no results', { skip: false }, function (t) {
+test('no results', t => {
   t.plan(3)
   var scope = nock('http://itunes.apple.com')
     .get('/search?media=podcast&country=us&term=xoxoxo')
@@ -137,7 +151,7 @@ test('no results', { skip: false }, function (t) {
   f.resume()
 })
 
-test('database closed', (t) => {
+test('database closed', t => {
   const cache = common.freshCache()
   const f = cache.search()
   cache.db.close((er) => {

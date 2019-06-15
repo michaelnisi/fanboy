@@ -76,7 +76,7 @@ if (TEST) {
   exports.parse = createResultsParser
   exports.putOps = putOps
   exports.resOp = resOp
-  exports.search = Search
+  exports.Search = Search
   exports.suggest = SearchTerms
   exports.termOp = termOp
 }

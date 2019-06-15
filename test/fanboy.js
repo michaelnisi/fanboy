@@ -65,14 +65,3 @@ test('state', (t) => {
   t.is(obj.state, 0)
   t.end()
 })
-
-test('Search', (t) => {
-  const f = fanboy.search
-  const inst = f()
-  t.ok(inst instanceof fanboy.base)
-  t.ok(inst instanceof f)
-  t.is(inst.toString(), 'fanboy: Search')
-  t.is(inst.path, '/search')
-  t.is(typeof inst._request, 'function')
-  t.end()
-})
