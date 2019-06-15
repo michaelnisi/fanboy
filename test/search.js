@@ -82,7 +82,7 @@ test('flowing with limited buffering', t => {
 })
 
 test('flowing without buffering', t => {
-  t.plan(3)
+  t.plan(4)
 
   const scope = nock('http://itunes.apple.com')
 
@@ -101,6 +101,10 @@ test('flowing without buffering', t => {
 
   f.on('end', () => {
     const payload = Buffer.concat(chunks)
+
+    // Trying snapshot testing here, not sure if it makes much sense.
+    t.matchSnapshot(payload, 'output')
+
     const items = JSON.parse(payload)
 
     t.is(items.length, 50)
