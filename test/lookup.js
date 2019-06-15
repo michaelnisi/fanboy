@@ -5,6 +5,22 @@ const fs = require('fs')
 const nock = require('nock')
 const path = require('path')
 const test = require('tap').test
+const { Lookup } = require('../lib/lookup')
+const { FanboyTransform } = require('../lib/stream')
+
+test('internals', (t) => {
+  const obj = new Lookup()
+
+  t.ok(obj instanceof FanboyTransform)
+  t.ok(obj instanceof Lookup)
+  t.is(obj.toString(), 'fanboy: Lookup')
+  t.is(obj.path, '/lookup')
+  t.is(typeof obj.reqOpts, 'function')
+  t.is(typeof obj._request, 'function')
+  t.is(obj.path, '/lookup')
+
+  t.end()
+})
 
 test('invalid guid', (t) => {
   t.plan(2)

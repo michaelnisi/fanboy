@@ -16,7 +16,8 @@ const ctx = repl.start({
 
 const svc = new Fanboy('/tmp/fanboy-repl.db', {
   media: 'podcast',
-  objectMode: true
+  objectMode: true,
+  hostname: 'itunes.localhost'
 })
 
 function format (obj, prop) {
