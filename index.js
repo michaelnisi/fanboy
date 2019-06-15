@@ -1,15 +1,11 @@
 'use strict'
 
 const LRU = require('lru-cache')
-const { debuglog } = require('util')
-const { FanboyTransform, defaults, mkpath, guid } = require('./lib/stream')
+const { defaults } = require('./lib/init')
 const { Search } = require('./lib/search')
 const { SearchTerms } = require('./lib/suggest')
 const { Lookup } = require('./lib/lookup')
-const { createResultsParser } = require('./lib/http')
 const { createDatabase } = require('./lib/level')
-
-const debug = debuglog('fanboy')
 
 // API
 
@@ -51,32 +47,9 @@ exports.Fanboy = Fanboy
 const TEST = process.mainModule.filename.match(/test/) !== null
 
 if (TEST) {
-  const {
-    close,
-    isStale,
-    keyStream,
-    termOp,
-    resOp,
-    putOps
-  } = require('./lib/level')
+  const { close } = require('./lib/level')
 
   Fanboy.prototype.close = function (cb) {
     close(this.db, cb)
   }
-
-  exports.base = FanboyTransform
-  exports.debug = debug
-  exports.defaults = defaults
-  exports.guid = guid
-  exports.isStale = isStale
-  exports.keyStream = keyStream
-  exports.lookup = Lookup
-  exports.mkpath = mkpath
-  exports.nop = () => {}
-  exports.parse = createResultsParser
-  exports.putOps = putOps
-  exports.resOp = resOp
-  exports.Search = Search
-  exports.suggest = SearchTerms
-  exports.termOp = termOp
 }

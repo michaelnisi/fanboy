@@ -1,7 +1,7 @@
 'use strict'
 
 var fs = require('fs')
-var parse = require('../').parse
+var { createResultsParser } = require('../lib/json')
 var path = require('path')
 var stread = require('stread')
 var test = require('tap').test
@@ -16,7 +16,7 @@ test('basics', { skip: false }, function (t) {
   function some () {
     return props[Math.floor(Math.random() * props.length)]
   }
-  var s = parse(readable)
+  var s = createResultsParser(readable)
   s.on('data', function (obj) {
     t.ok(obj[some()], 'should have some')
     if (Math.random() > 0.5) {
@@ -33,7 +33,7 @@ test('basics', { skip: false }, function (t) {
 
 test('not json', { skip: false }, function (t) {
   var readable = stread('why hello')
-  var s = parse(readable)
+  var s = createResultsParser(readable)
   t.plan(2)
   s.on('error', function (er) {
     t.ok(er)

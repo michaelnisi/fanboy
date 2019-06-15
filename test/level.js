@@ -1,9 +1,8 @@
 'use strict'
 
-var fanboy = require('../')
 var test = require('tap').test
 
-const { isStale } = require('../lib/level')
+const { isStale, resOp, termOp, putOps } = require('../lib/level')
 
 var DIV = '\udbff\udfff'
 
@@ -15,9 +14,8 @@ test('isStale', function (t) {
 })
 
 test('resOp', function (t) {
-  var f = fanboy.resOp
   t.plan(1)
-  t.ok(!!JSON.parse(f({ guid: 0 }).value).ts)
+  t.ok(!!JSON.parse(resOp({ guid: 0 }).value).ts)
   t.end()
 })
 
@@ -40,7 +38,7 @@ test('termOp', function (t) {
   ]
   t.plan(1)
   ;[
-    fanboy.termOp('abc', keys, now)
+    termOp('abc', keys, now)
   ].forEach(function (found, i) {
     t.deepEqual(found, wanted[i])
   })
@@ -67,7 +65,7 @@ test('putOps', function (t) {
       key: ['fnb', 'trm', 'abc'].join(DIV),
       value: str([now].concat(keys)) }
   ]
-  var found = fanboy.putOps('abc', results, now)
+  var found = putOps('abc', results, now)
   t.plan(1)
   t.deepEqual(found, wanted)
   t.end()
