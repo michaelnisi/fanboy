@@ -29,9 +29,9 @@ The options for the **fanboy** cache:
 - `country = 'us'` The country code for the search API.
 - `highWaterMark` `Number` Passed to `stream.Readable` constructor.
 - `hostname = 'itunes.apple.com'` The host name of the store.
+- `max` = 500 Number of in-memory non-result terms.
 - `media = 'all'` The media type to search for.
 - `objectMode = false` Whether this stream should behave as a stream of objects.
-- `path = '/search'` The path to the store.
 - `port = 80` The port to access the store.
 - `result` `result()`
 - `ttl = 24 * 3600 * 1000` Time in milliseconds before cached items go stale.

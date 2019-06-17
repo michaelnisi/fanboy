@@ -8,6 +8,33 @@ const test = require('tap').test
 const { Lookup } = require('../lib/lookup')
 const { FanboyTransform } = require('../lib/stream')
 
+test('some uncached results', t => {
+  const scope = nock('http://itunes.apple.com')
+    .get('/lookup?id=537879700')
+    .reply(200, (uri, body) => {
+      t.comment(uri)
+
+      const p = path.join(__dirname, 'data', '537879700.json')
+
+      return fs.createReadStream(p)
+    }
+    )
+
+  const cache = common.freshCache()
+
+  cache.llookup('537879700', (er, item) => {
+    if (er) throw er
+
+    t.is(item.guid, 537879700)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
 test('internals', (t) => {
   const obj = new Lookup()
 

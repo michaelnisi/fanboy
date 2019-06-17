@@ -7,6 +7,7 @@ const { SearchTerms } = require('./lib/suggest')
 const { Lookup } = require('./lib/lookup')
 const { createDatabase } = require('./lib/level')
 const { search } = require('./lib/v2/search')
+const { lookup } = require('./lib/v2/lookup')
 
 // API
 
@@ -46,6 +47,12 @@ class Fanboy {
     // TODO: Adjust so we can pass this directly.
     const context = { db: this.db, ttl: this.state.ttl, cache: this.state.cache }
     search(term, context, cb)
+  }
+
+  llookup (guid, cb) {
+    // TODO: Adjust so we can pass this directly.
+    const context = { db: this.db, ttl: this.state.ttl, cache: this.state.cache }
+    lookup(guid, context, cb)
   }
 }
 
