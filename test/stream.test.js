@@ -8,8 +8,7 @@ test('FanboyTransform', t => {
 
   t.is(it.country, 'us')
   t.is(it.max, 500)
-  t.is(it.media, 'all')
-  t.is(it.path, '/search')
+  t.is(it.media, 'podcast')
   t.is(it.port, 80)
   t.is(it.state, 0)
   t.is(it.toString(), 'fanboy: FanboyTransform')

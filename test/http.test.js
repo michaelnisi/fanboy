@@ -4,6 +4,14 @@ const common = require('./lib/common')
 const http = require('http')
 const test = require('tap').test
 const { URL } = require('url')
+const { createPath } = require('../lib/v2/http')
+
+test('creating iTunes API path', t => {
+  t.is(createPath('/search', 'apple'), '/search?media=all&country=us&term=apple')
+  t.is(createPath('/lookup', '123'), '/lookup?id=123')
+  t.throws(() => { createPath('/hello', 'dog') })
+  t.end()
+})
 
 function codesBetween (smaller, larger) {
   let codes = []

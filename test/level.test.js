@@ -1,8 +1,22 @@
 'use strict'
 
-var test = require('tap').test
+const { test } = require('tap')
+const common = require('./lib/common')
+const { isStale, resOp, termOp, putOps, keysForTerm } = require('../lib/level')
 
-const { isStale, resOp, termOp, putOps } = require('../lib/level')
+test('keys not found', t => {
+  t.plan(3)
+
+  const cache = common.freshCache()
+
+  keysForTerm(cache.db, 'abc', 0, (er, keys) => {
+    t.ok(er.notFound, 'should error not found')
+    t.is(keys, undefined)
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+    })
+  })
+})
 
 var DIV = '\udbff\udfff'
 

@@ -6,6 +6,7 @@ const { Search } = require('./lib/search')
 const { SearchTerms } = require('./lib/suggest')
 const { Lookup } = require('./lib/lookup')
 const { createDatabase } = require('./lib/level')
+const { search } = require('./lib/v2/search')
 
 // API
 
@@ -37,6 +38,14 @@ class Fanboy {
   // Returns a new suggest stream respecting result `limit`.
   suggest (limit) {
     return new SearchTerms(this.db, this.state, limit)
+  }
+
+  // MARK:
+
+  ssearch (term, cb) {
+    // TODO: Adjust so we can pass this directly.
+    const context = { db: this.db, ttl: this.state.ttl, cache: this.state.cache }
+    search(term, context, cb)
   }
 }
 

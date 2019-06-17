@@ -13,9 +13,8 @@ test('defaults', (t) => {
     highWaterMark: undefined,
     hostname: 'itunes.apple.com',
     max: 500,
-    media: 'all',
+    media: 'podcast',
     objectMode: false,
-    path: '/search',
     port: 80,
     result: guid,
     ttl: 86400000
