@@ -5,7 +5,6 @@ const fs = require('fs')
 const nock = require('nock')
 const path = require('path')
 const { test } = require('tap')
-const { env } = require('../lib/init')
 
 function stream (scope, term) {
   scope.get('/search?media=podcast&country=us&term=' + term).reply(200,
@@ -116,27 +115,6 @@ test('unexpected HTTP status code', t => {
   cache.ssearch('hello', (er, results) => {
     t.is(er.message, 'unexpected HTTP status code: 404')
     t.ok(scope.isDone())
-    common.teardown(cache, () => {
-      t.pass('should teardown')
-      t.end()
-    })
-  })
-})
-
-test('failed request', t => {
-  const cache = common.freshCache()
-
-  const { hostname, port } = env()
-
-  process.env.FANBOY_HOSTNAME = 'xxx'
-  process.env.FANBOY_PORT = 12345
-
-  cache.ssearch('hopeless', (er, results) => {
-    t.is(er.message, 'fanboy: getaddrinfo ENOTFOUND xxx xxx:12345')
-
-    process.env.FANBOY_HOSTNAME = hostname
-    process.env.FANBOY_PORT = port
-
     common.teardown(cache, () => {
       t.pass('should teardown')
       t.end()

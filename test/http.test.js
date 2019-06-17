@@ -14,11 +14,30 @@ test('creating iTunes API path', t => {
 })
 
 test('aborted', t => {
-  const req = request('/search', 'abortion', (er, res) => {
-    t.is(er.message, 'fanboy: request aborted')
-    t.end()
+  const req = request({
+    path: '/search',
+    term: 'abortion',
+    responseHandler: (er, res) => {
+      t.is(er.message, 'fanboy: request aborted')
+      t.is(res, undefined)
+      t.end()
+    }
   })
+
   req.abort()
+})
+
+test('failed request', t => {
+  request({
+    path: '/search',
+    term: 'xxx',
+    responseHandler: (er, res) => {
+      t.is(er.message, 'fanboy: getaddrinfo ENOTFOUND xxx xxx:12345')
+      t.is(res, undefined)
+      t.end()
+    } },
+  { hostname: 'xxx', port: 12345 }
+  ).end()
 })
 
 function codesBetween (smaller, larger) {
@@ -72,7 +91,7 @@ function run (codes, t) {
       })
     }
 
-    const cache = common.freshCache(null, hostname, port)
+    const cache = common.freshCache({ hostname, port })
     const f = cache.search()
     let chunks = []
 
