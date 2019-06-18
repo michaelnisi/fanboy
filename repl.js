@@ -39,7 +39,7 @@ const writer = new Transform({
 
     if (item) {
       const chunk = format(item, prop)
-      
+
       this.push(chunk)
       this.push('\n')
     } else {
@@ -64,9 +64,14 @@ function print (error, items, prop) {
     return console.error(error)
   }
 
+  process.stdout.write('\n')
+
   for (let item of items) {
     writer.write([item, prop])
   }
+
+  process.stdout.write('ok\n')
+  server.displayPrompt()
 }
 
 function search (term, prop) {
