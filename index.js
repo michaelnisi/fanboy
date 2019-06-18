@@ -2,19 +2,23 @@
 
 const LRU = require('lru-cache')
 const { defaults } = require('./lib/init')
-const { createDatabase } = require('./lib/level')
 const { search } = require('./lib/search')
 const { lookup } = require('./lib/lookup')
 const { suggest } = require('./lib/suggest')
 
 class Fanboy {
-  // Cache using the database at `location`.
-  constructor (location, opts) {
+  /**
+   * Creates a new Fanboy cache.
+   * @param {*} db The [Level](https://github.com/Level) database for storage.
+   * @param {*} opts Some optional configuration.
+   */
+  constructor (db, opts) {
     opts = defaults(opts)
-    opts.db = createDatabase(location, opts.cacheSize)
-    opts.cache = new LRU({ maxAge: opts.ttl, max: opts.max })
 
     Object.assign(this, opts)
+
+    this.db = db
+    this.cache = new LRU({ maxAge: opts.ttl, max: opts.max })
   }
 
   search (term, onItems) {

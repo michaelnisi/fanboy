@@ -5,11 +5,15 @@ exports.teardown = teardown
 
 const { Fanboy } = require('../../')
 const rimraf = require('rimraf')
+const { createDatabase } = require('../../lib/level')
+const { defaults } = require('../../lib/init')
 
-function freshCache (opts) {
-  const name = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
+function freshCache (custom = { media: 'podcast' }) {
+  const location = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
+  const opts = defaults(custom)
+  const db = createDatabase(location, opts.cacheSize)
 
-  return new Fanboy(name, Object.assign({ media: 'podcast' }, opts))
+  return new Fanboy(db, opts)
 }
 
 function teardown (cache, cb) {
