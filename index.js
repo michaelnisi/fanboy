@@ -3,9 +3,9 @@
 const LRU = require('lru-cache')
 const { defaults } = require('./lib/init')
 const { createDatabase } = require('./lib/level')
-const { search } = require('./lib/v2/search')
-const { lookup } = require('./lib/v2/lookup')
-const { suggest } = require('./lib/v2/suggest')
+const { search } = require('./lib/search')
+const { lookup } = require('./lib/lookup')
+const { suggest } = require('./lib/suggest')
 
 // API
 

@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('tap').test
-const { createPath, request } = require('../lib/v2/http')
+const { createPath, request } = require('../lib/http')
 
 test('creating iTunes API path', t => {
   t.is(createPath('/search', 'apple'), '/search?media=all&country=us&term=apple')

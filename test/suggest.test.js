@@ -6,7 +6,7 @@ const test = require('tap').test
 
 const cache = common.freshCache()
 
-test('suggest v2', (t) => {
+test('suggest', (t) => {
   const db = cache.db
 
   function key (term) {
