@@ -2,9 +2,6 @@
 
 const LRU = require('lru-cache')
 const { defaults } = require('./lib/init')
-const { Search } = require('./lib/search')
-const { SearchTerms } = require('./lib/suggest')
-const { Lookup } = require('./lib/lookup')
 const { createDatabase } = require('./lib/level')
 const { search } = require('./lib/v2/search')
 const { lookup } = require('./lib/v2/lookup')
@@ -26,23 +23,6 @@ class Fanboy {
     this.db = createDatabase(name, opts.cacheSize)
     this.state = Fanboy.createState(opts)
   }
-
-  // Returns a new search stream.
-  search () {
-    return new Search(this.db, this.state)
-  }
-
-  // Returns a new lookup stream.
-  lookup () {
-    return new Lookup(this.db, this.state)
-  }
-
-  // Returns a new suggest stream respecting result `limit`.
-  suggest (limit) {
-    return new SearchTerms(this.db, this.state, limit)
-  }
-
-  // MARK:
 
   ssearch (term, onItems) {
     // TODO: Adjust so we can pass this directly.
