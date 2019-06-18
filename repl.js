@@ -8,6 +8,7 @@ const repl = require('repl')
 const { inspect } = require('util')
 const { createDatabase } = require('./lib/level')
 const { defaults } = require('./lib/init')
+const { Transform, pipeline } = require('stream')
 
 function createCache (custom = { media: 'podcast' }) {
   const location = '/tmp/fanboy-repl'
@@ -32,16 +33,40 @@ function format (obj, prop) {
   return inspect(prop ? obj[prop] : obj, { colors: true })
 }
 
+const writer = new Transform({
+  transform (obj, enc, cb) {
+    const [item, prop] = obj
+
+    if (item) {
+      const chunk = format(item, prop)
+      
+      this.push(chunk)
+      this.push('\n')
+    } else {
+      this.push(null)
+    }
+
+    cb()
+  },
+  objectMode: true
+})
+
+pipeline(
+  writer,
+  process.stdout,
+  err => {
+    console.error(err || new Error('pipeline ended'))
+  }
+)
+
 function print (error, items, prop) {
   if (error) {
     return console.error(error)
   }
 
   for (let item of items) {
-    console.log(format(item, prop))
+    writer.write([item, prop])
   }
-
-  server.displayPrompt()
 }
 
 function search (term, prop) {
