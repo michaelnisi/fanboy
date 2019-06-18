@@ -22,7 +22,7 @@ test('some uncached results', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('gruber', (er, results) => {
+  cache.search('gruber', (er, results) => {
     if (er) throw er
 
     t.is(results.length, 13)
@@ -41,7 +41,7 @@ test('many uncached results', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('apple', (er, results) => {
+  cache.search('apple', (er, results) => {
     if (er) throw er
 
     t.is(results.length, 50)
@@ -67,7 +67,7 @@ test('no results', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('xoxoxo', (er, results) => {
+  cache.search('xoxoxo', (er, results) => {
     if (er) throw er
 
     t.same(results, [])
@@ -85,13 +85,13 @@ test('some cached results', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('gruber', (er, results) => {
+  cache.search('gruber', (er, results) => {
     if (er) throw er
 
     t.is(results.length, 13)
     t.ok(scope.isDone())
 
-    cache.ssearch('gruber', (er, results) => {
+    cache.search('gruber', (er, results) => {
       if (er) throw er
 
       t.is(results.length, 13)
@@ -112,7 +112,7 @@ test('unexpected HTTP status code', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('hello', (er, results) => {
+  cache.search('hello', (er, results) => {
     t.is(er.message, 'unexpected HTTP status code: 404')
     t.ok(scope.isDone())
     common.teardown(cache, () => {
@@ -132,7 +132,7 @@ test('parse error', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('dog', (er, results) => {
+  cache.search('dog', (er, results) => {
     t.is(er.message, 'Invalid JSON (Unexpected "h" at position 0 in state STOP)')
     t.ok(scope.isDone())
     common.teardown(cache, () => {
@@ -153,7 +153,7 @@ test('socket timeout', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('dog', (er, results) => {
+  cache.search('dog', (er, results) => {
     t.is(er.message, 'fanboy: socket hang up')
     t.ok(scope.isDone())
     common.teardown(cache, () => {
@@ -170,7 +170,7 @@ test('no response', t => {
 
   const cache = common.freshCache()
 
-  cache.ssearch('void', (er, results) => {
+  cache.search('void', (er, results) => {
     t.is(er.message, 'nothing to read')
     t.ok(scope.isDone())
     common.teardown(cache, () => {
@@ -186,7 +186,7 @@ test('database closed', t => {
   cache.db.close((er) => {
     if (er) throw er
 
-    cache.ssearch('abc', (er, results) => {
+    cache.search('abc', (er, results) => {
       t.is(er.message, 'Database is not open')
       t.is(results, undefined)
       common.teardown(cache, () => {

@@ -19,7 +19,7 @@ test('an uncached result', t => {
 
   const cache = common.freshCache()
 
-  cache.llookup('537879700', (er, item) => {
+  cache.lookup('537879700', (er, item) => {
     if (er) throw er
 
     t.is(item.guid, 537879700)
@@ -35,7 +35,7 @@ test('an uncached result', t => {
 test('invalid guid', (t) => {
   const cache = common.freshCache()
 
-  cache.llookup('hello', (er, item) => {
+  cache.lookup('hello', (er, item) => {
     t.is(er.message, 'invalid iTunes ID')
     t.is(item, item, undefined)
     t.end()
@@ -48,7 +48,7 @@ test('database closed', (t) => {
   cache.close(er => {
     if (er) throw er
 
-    cache.llookup('537879700', (er, item) => {
+    cache.lookup('537879700', (er, item) => {
       t.is(er.message, 'Database is not open')
       t.is(item, undefined)
 

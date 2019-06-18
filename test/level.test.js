@@ -2,7 +2,35 @@
 
 const { test } = require('tap')
 const common = require('./lib/common')
-const { isStale, resOp, termOp, putOps, keysForTerm } = require('../lib/level')
+
+const {
+  isStale,
+  resOp,
+  termOp,
+  putOps,
+  keysForTerm,
+  guid,
+  put
+} = require('../lib/level')
+
+test('guid', t => {
+  t.is(guid(), undefined)
+  t.is(guid(null), null)
+  t.end()
+})
+
+test('empty putting', t => {
+  function check (objs) {
+    if (!objs.length) return t.end()
+
+    put(null, 'nothing', objs.pop(), er => {
+      t.is(er.message, 'fanboy: cannot store empty results')
+      check(objs)
+    })
+  }
+
+  check([undefined, null, []])
+})
 
 test('keys not found', t => {
   t.plan(3)

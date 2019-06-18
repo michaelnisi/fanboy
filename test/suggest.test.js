@@ -26,7 +26,7 @@ test('suggest', (t) => {
   db.batch(puts, (er) => {
     if (er) throw er
 
-    cache.ssuggest('a', (er, terms) => {
+    cache.suggest('a', (er, terms) => {
       if (er) throw er
       t.deepEqual(terms, ['abc'])
       t.end()
