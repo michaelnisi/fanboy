@@ -5,6 +5,7 @@ const fs = require('fs')
 const nock = require('nock')
 const path = require('path')
 const { test } = require('tap')
+const { keysForTerm } = require('../lib/level')
 
 function stream (scope, term) {
   scope.get('/search?media=podcast&country=us&term=' + term).reply(200,
@@ -95,7 +96,31 @@ test('some cached results', t => {
       if (er) throw er
 
       t.is(results.length, 13)
-      t.ok(scope.isDone())
+
+      common.teardown(cache, () => {
+        t.pass('should teardown')
+        t.end()
+      })
+    })
+  })
+})
+
+test('stale keys', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  stream(scope, 'gruber')
+
+  const cache = common.freshCache()
+
+  cache.search('gruber', (er, results) => {
+    if (er) throw er
+
+    t.is(results.length, 13)
+    t.ok(scope.isDone())
+
+    keysForTerm(cache.db, 'gruber', 0, (er, keys) => {
+      t.is(er.message, 'fanboy: stale keys for gruber')
+      t.is(keys.length, 13)
 
       common.teardown(cache, () => {
         t.pass('should teardown')

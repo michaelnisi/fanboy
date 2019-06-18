@@ -6,7 +6,7 @@ const { search } = require('./lib/search')
 const { lookup } = require('./lib/lookup')
 const { suggest } = require('./lib/suggest')
 
-class Fanboy {
+exports.Fanboy = class Fanboy {
   /**
    * Creates a new Fanboy cache.
    * @param {*} db The [Level](https://github.com/Level) database for storage.
@@ -31,17 +31,5 @@ class Fanboy {
 
   suggest (term, onTerms) {
     suggest(term, this, onTerms)
-  }
-}
-
-exports.Fanboy = Fanboy
-
-const TEST = process.mainModule.filename.match(/test/) !== null
-
-if (TEST) {
-  const { close } = require('./lib/level')
-
-  Fanboy.prototype.close = function (cb) {
-    close(this.db, cb)
   }
 }

@@ -13,6 +13,13 @@ const {
   put
 } = require('../lib/level')
 
+test('putting invalid value', t => {
+  const { db } = common.freshCache()
+
+  t.throws(() => { put(db, 'dog', [{}]) }, 'not a string, number, or buffer')
+  t.end()
+})
+
 test('guid', t => {
   t.is(guid(), undefined)
   t.is(guid(null), null)

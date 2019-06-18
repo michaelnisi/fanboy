@@ -4,9 +4,8 @@ const common = require('./lib/common')
 const keys = require('../lib/keys')
 const test = require('tap').test
 
-const cache = common.freshCache()
-
 test('suggest', (t) => {
+  const cache = common.freshCache()
   const db = cache.db
 
   function key (term) {
@@ -34,8 +33,19 @@ test('suggest', (t) => {
   })
 })
 
-test('teardown', (t) => {
-  common.teardown(cache, () => {
-    t.end()
+test('database closed', (t) => {
+  const cache = common.freshCache()
+
+  cache.db.close(er => {
+    if (er) throw er
+
+    cache.suggest('a', (er, terms) => {
+      t.is(er.message, 'Database is closed')
+
+      common.teardown(cache, () => {
+        t.pass('should teardown')
+        t.end()
+      })
+    })
   })
 })
