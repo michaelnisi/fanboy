@@ -6,40 +6,62 @@
 const { Fanboy } = require('./')
 const repl = require('repl')
 const { inspect } = require('util')
+const { createDatabase } = require('./lib/level')
+const { defaults } = require('./lib/init')
 
-const ctx = repl.start({
+function createCache (custom = { media: 'podcast' }) {
+  const location = '/tmp/fanboy-repl'
+  const opts = defaults(custom)
+  const db = createDatabase(location)
+
+  return new Fanboy(db, opts)
+}
+
+const fanboy = createCache()
+
+const server = repl.start({
   prompt: 'fanboy> ',
   ignoreUndefined: true,
   input: process.stdin,
   output: process.stdout
-}).context
-
-const svc = new Fanboy('/tmp/fanboy-repl.db', {
-  media: 'podcast',
-  objectMode: true
 })
+
+const { context } = server
 
 function format (obj, prop) {
   return inspect(prop ? obj[prop] : obj, { colors: true })
 }
 
-// Needs to buffer, of course. This is not how you should be using streams.
-function read (readable, prop) {
-  let obj
-  while ((obj = readable.read()) !== null) {
-    console.log(format(obj, prop))
+function print (error, items, prop) {
+  if (error) {
+    return console.error(error)
   }
+
+  for (let item of items) {
+    console.log(format(item, prop))
+  }
+
+  server.displayPrompt()
 }
 
-const search = svc.search()
-const suggest = svc.suggest()
-const lookup = svc.lookup()
+function search (term, prop) {
+  fanboy.search(term, (error, items) => {
+    print(error, items, prop)
+  })
+}
 
-search.on('error', console.error)
-suggest.on('error', console.error)
-lookup.on('error', console.error)
+function lookup (guid, prop) {
+  fanboy.lookup(guid, (error, item) => {
+    print(error, [item], prop)
+  })
+}
 
-ctx.search = search
-ctx.suggest = suggest
-ctx.lookup = lookup
-ctx.read = read
+function suggest (term) {
+  fanboy.suggest(term, (error, terms) => {
+    print(error, terms)
+  })
+}
+
+context.search = search
+context.lookup = lookup
+context.suggest = suggest

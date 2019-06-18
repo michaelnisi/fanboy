@@ -11,7 +11,7 @@ const { defaults } = require('../../lib/init')
 function freshCache (custom = { media: 'podcast' }) {
   const location = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
   const opts = defaults(custom)
-  const db = createDatabase(location, opts.cacheSize)
+  const db = createDatabase(location)
 
   return new Fanboy(db, opts)
 }

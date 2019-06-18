@@ -47,6 +47,11 @@ test('many uncached results', t => {
 
     t.is(results.length, 50)
     t.ok(scope.isDone())
+
+    for (let result of results) {
+      t.is(typeof result.collectionName, 'string')
+    }
+
     common.teardown(cache, () => {
       t.pass('should teardown')
       t.end()

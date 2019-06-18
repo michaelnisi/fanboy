@@ -8,9 +8,7 @@ test('defaults', (t) => {
 
   const wanted = {
     cache: { get: nop, set: nop, reset: nop },
-    cacheSize: 8388608,
     country: 'us',
-    highWaterMark: undefined,
     hostname: 'itunes.apple.com',
     max: 500,
     media: 'podcast',
