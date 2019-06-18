@@ -8,6 +8,7 @@ const { Lookup } = require('./lib/lookup')
 const { createDatabase } = require('./lib/level')
 const { search } = require('./lib/v2/search')
 const { lookup } = require('./lib/v2/lookup')
+const { suggest } = require('./lib/v2/suggest')
 
 // API
 
@@ -43,16 +44,21 @@ class Fanboy {
 
   // MARK:
 
-  ssearch (term, cb) {
+  ssearch (term, onItems) {
     // TODO: Adjust so we can pass this directly.
     const context = { db: this.db, ttl: this.state.ttl, cache: this.state.cache }
-    search(term, context, cb)
+    search(term, context, onItems)
   }
 
-  llookup (guid, cb) {
-    // TODO: Adjust so we can pass this directly.
+  llookup (guid, onItem) {
+    // TODO: Adjust so we can pass this directly. lookup(guid, this, onItem)
     const context = { db: this.db, ttl: this.state.ttl, cache: this.state.cache }
-    lookup(guid, context, cb)
+    lookup(guid, context, onItem)
+  }
+
+  ssuggest (term, onTerms) {
+    const context = { db: this.db, limit: 50 }
+    suggest(term, context, onTerms)
   }
 }
 
