@@ -16,6 +16,25 @@ function createScope (protocol = 'http:') {
     })
 }
 
+test('uncached item 443', t => {
+  const cache = common.freshCache()
+  cache.port = 443
+
+  const scope = createScope('https:')
+
+  cache.lookup('537879700', (er, item) => {
+    if (er) throw er
+
+    t.is(item.guid, 537879700)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
 test('uncached item', t => {
   const scope = createScope()
   const cache = common.freshCache()

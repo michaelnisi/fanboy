@@ -20,6 +20,8 @@ test('defaults', (t) => {
     ttl: 86400000
   }
 
+  nop() // 100
+
   t.deepEquals(defaults(), wanted)
 
   t.end()
