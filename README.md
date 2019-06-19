@@ -1,9 +1,8 @@
-[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
-[![Coverage Status](https://coveralls.io/repos/github/michaelnisi/fanboy/badge.svg?branch=master)](https://coveralls.io/github/michaelnisi/fanboy?branch=master)
+# Fanboy
 
-# fanboy
+[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy) 💯 🐶
 
-The Fanboy [Node.js](http://nodejs.org/) package implements a caching proxy for a subset of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
+The Fanboy [Node.js](http://nodejs.org/) package provides a caching proxy for a subset of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
 
 ## Types
 
