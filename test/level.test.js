@@ -1,8 +1,57 @@
 'use strict'
 
-var test = require('tap').test
+const { test } = require('tap')
+const common = require('./lib/common')
 
-const { isStale, resOp, termOp, putOps } = require('../lib/level')
+const {
+  isStale,
+  resOp,
+  termOp,
+  putOps,
+  keysForTerm,
+  guid,
+  put
+} = require('../lib/level')
+
+test('putting invalid value', t => {
+  const { db } = common.freshCache()
+
+  t.throws(() => { put(db, 'dog', [{}]) }, 'not a string, number, or buffer')
+  t.end()
+})
+
+test('guid', t => {
+  t.is(guid(), undefined)
+  t.is(guid(null), null)
+  t.end()
+})
+
+test('empty putting', t => {
+  function check (objs) {
+    if (!objs.length) return t.end()
+
+    put(null, 'nothing', objs.pop(), er => {
+      t.is(er.message, 'fanboy: cannot store empty results')
+      check(objs)
+    })
+  }
+
+  check([undefined, null, []])
+})
+
+test('keys not found', t => {
+  t.plan(3)
+
+  const cache = common.freshCache()
+
+  keysForTerm(cache.db, 'abc', 0, (er, keys) => {
+    t.ok(er.notFound, 'should error not found')
+    t.is(keys, undefined)
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+    })
+  })
+})
 
 var DIV = '\udbff\udfff'
 

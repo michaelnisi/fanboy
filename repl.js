@@ -3,44 +3,92 @@
 // A REPL to explore the fanboy API, helpful for debugging:
 // $ NODE_DEBUG=fanboy ./repl.js
 
-const { Fanboy } = require('./')
+const { Fanboy, createLevelDB } = require('./')
 const repl = require('repl')
 const { inspect } = require('util')
+const { Transform, pipeline } = require('stream')
 
-const ctx = repl.start({
+function createCache () {
+  const location = '/tmp/fanboy-repl'
+  const db = createLevelDB(location)
+
+  return new Fanboy(db)
+}
+
+const fanboy = createCache()
+
+const server = repl.start({
   prompt: 'fanboy> ',
   ignoreUndefined: true,
   input: process.stdin,
   output: process.stdout
-}).context
-
-const svc = new Fanboy('/tmp/fanboy-repl.db', {
-  media: 'podcast',
-  objectMode: true,
-  hostname: 'itunes.localhost'
 })
+
+const { context } = server
 
 function format (obj, prop) {
   return inspect(prop ? obj[prop] : obj, { colors: true })
 }
 
-// Needs to buffer, of course. This is not how you should be using streams.
-function read (readable, prop) {
-  let obj
-  while ((obj = readable.read()) !== null) {
-    console.log(format(obj, prop))
+const writer = new Transform({
+  transform (obj, enc, cb) {
+    const [item, prop] = obj
+
+    if (item) {
+      const chunk = format(item, prop)
+
+      this.push(chunk)
+      this.push('\n')
+    } else {
+      this.push(null)
+    }
+
+    cb()
+  },
+  objectMode: true
+})
+
+pipeline(
+  writer,
+  process.stdout,
+  err => {
+    console.error(err || new Error('pipeline ended'))
   }
+)
+
+function print (error, items, prop) {
+  if (error) {
+    return console.error(error)
+  }
+
+  process.stdout.write('\n')
+
+  for (let item of items) {
+    writer.write([item, prop])
+  }
+
+  process.stdout.write('ok\n')
+  server.displayPrompt()
 }
 
-const search = svc.search()
-const suggest = svc.suggest()
-const lookup = svc.lookup()
+function search (term, prop) {
+  fanboy.search(term, (error, items) => {
+    print(error, items, prop)
+  })
+}
 
-search.on('error', console.error)
-suggest.on('error', console.error)
-lookup.on('error', console.error)
+function lookup (guid, prop) {
+  fanboy.lookup(guid, (error, item) => {
+    print(error, [item], prop)
+  })
+}
 
-ctx.search = search
-ctx.suggest = suggest
-ctx.lookup = lookup
-ctx.read = read
+function suggest (term) {
+  fanboy.suggest(term, (error, terms) => {
+    print(error, terms)
+  })
+}
+
+context.search = search
+context.lookup = lookup
+context.suggest = suggest

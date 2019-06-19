@@ -5,20 +5,7 @@ const fs = require('fs')
 const nock = require('nock')
 const path = require('path')
 const { test } = require('tap')
-const { Search } = require('../lib/search')
-const { FanboyTransform } = require('../lib/stream')
-
-test('internals', (t) => {
-  const it = new Search()
-
-  t.ok(it instanceof FanboyTransform)
-  t.ok(it instanceof Search)
-  t.is(it.toString(), 'fanboy: Search')
-  t.is(it.path, '/search')
-  t.is(typeof it._request, 'function')
-
-  t.end()
-})
+const { keysForTerm } = require('../lib/level')
 
 function stream (scope, term) {
   scope.get('/search?media=podcast&country=us&term=' + term).reply(200,
@@ -29,143 +16,212 @@ function stream (scope, term) {
   )
 }
 
-test('flowing mode', t => {
-  t.plan(3)
-  var scope = nock('http://itunes.apple.com')
+test('some uncached results', t => {
+  const scope = nock('http://itunes.apple.com')
+
   stream(scope, 'gruber')
-  var cache = common.freshCache()
-  var f = cache.search()
-  var buf = ''
-  f.end('gruber')
-  f.on('data', function (chunk) {
-    buf += chunk
-  })
-  f.on('end', () => {
-    var items = JSON.parse(buf)
-    t.is(items.length, 13)
+
+  const cache = common.freshCache()
+
+  cache.search('gruber', (er, results) => {
+    if (er) throw er
+
+    t.is(results.length, 13)
     t.ok(scope.isDone())
     common.teardown(cache, () => {
       t.pass('should teardown')
+      t.end()
     })
   })
 })
 
-test('flowing with limited buffering', t => {
-  t.plan(3)
-
+test('many uncached results', t => {
   const scope = nock('http://itunes.apple.com')
 
   stream(scope, 'apple')
 
-  const cache = common.freshCache(4096)
-  const f = cache.search()
+  const cache = common.freshCache()
 
-  let chunks = []
+  cache.search('apple', (er, results) => {
+    if (er) throw er
 
-  f.end('apple')
-
-  f.on('data', (chunk) => {
-    chunks.push(chunk)
-  })
-
-  f.on('end', () => {
-    const payload = Buffer.concat(chunks)
-    const items = JSON.parse(payload)
-
-    t.is(items.length, 50)
+    t.is(results.length, 50)
     t.ok(scope.isDone())
 
-    common.teardown(cache, () => {
-      t.pass('should teardown')
-    })
-  })
-})
-
-test('flowing without buffering', t => {
-  t.plan(4)
-
-  const scope = nock('http://itunes.apple.com')
-
-  stream(scope, 'apple')
-
-  const cache = common.freshCache(0)
-  const f = cache.search()
-
-  let chunks = []
-
-  f.end('apple')
-
-  f.on('data', (chunk) => {
-    chunks.push(chunk)
-  })
-
-  f.on('end', () => {
-    const payload = Buffer.concat(chunks)
-
-    // Trying snapshot testing here, not sure if it makes much sense.
-    t.matchSnapshot(payload, 'output')
-
-    const items = JSON.parse(payload)
-
-    t.is(items.length, 50)
-    t.ok(scope.isDone())
+    for (let result of results) {
+      t.is(typeof result.collectionName, 'string')
+    }
 
     common.teardown(cache, () => {
       t.pass('should teardown')
-    })
-  })
-})
-
-test('not found', t => {
-  t.plan(3)
-  var cache = common.freshCache()
-  var f = cache.search()
-  f.keysForTerm('abc', function (er, keys) {
-    t.ok(er.notFound, 'should error not found')
-    t.is(keys, undefined)
-    common.teardown(cache, () => {
-      t.pass('should teardown')
+      t.end()
     })
   })
 })
 
 test('no results', t => {
   t.plan(3)
-  var scope = nock('http://itunes.apple.com')
+
+  const scope = nock('http://itunes.apple.com')
     .get('/search?media=podcast&country=us&term=xoxoxo')
     .reply(200, function (uri, body) {
-      return ''
+      return JSON.stringify({
+        resultsCount: 0,
+        results: []
+      })
     })
-  var cache = common.freshCache()
-  var f = cache.search()
-  var buf = ''
-  f.on('data', function (chunk) {
-    buf += chunk
-  })
-  f.on('end', function (er) {
-    var wanted = []
-    var found = JSON.parse(buf)
-    t.same(wanted, found)
+
+  const cache = common.freshCache()
+
+  cache.search('xoxoxo', (er, results) => {
+    if (er) throw er
+
+    t.same(results, [])
     t.ok(scope.isDone())
     common.teardown(cache, () => {
       t.pass('should teardown')
     })
   })
-  f.end('xoxoxo')
-  f.resume()
+})
+
+test('some cached results', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  stream(scope, 'gruber')
+
+  const cache = common.freshCache()
+
+  cache.search('gruber', (er, results) => {
+    if (er) throw er
+
+    t.is(results.length, 13)
+    t.ok(scope.isDone())
+
+    cache.search('gruber', (er, results) => {
+      if (er) throw er
+
+      t.is(results.length, 13)
+
+      common.teardown(cache, () => {
+        t.pass('should teardown')
+        t.end()
+      })
+    })
+  })
+})
+
+test('stale keys', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  stream(scope, 'gruber')
+
+  const cache = common.freshCache()
+
+  cache.search('gruber', (er, results) => {
+    if (er) throw er
+
+    t.is(results.length, 13)
+    t.ok(scope.isDone())
+
+    keysForTerm(cache.db, 'gruber', 0, (er, keys) => {
+      t.is(er.message, 'fanboy: stale keys for gruber')
+      t.is(keys.length, 13)
+
+      common.teardown(cache, () => {
+        t.pass('should teardown')
+        t.end()
+      })
+    })
+  })
+})
+
+test('unexpected HTTP status code', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  scope.get('/search?media=podcast&country=us&term=' + 'hello').reply(404)
+
+  const cache = common.freshCache()
+
+  cache.search('hello', (er, results) => {
+    t.is(er.message, 'unexpected HTTP status code: 404')
+    t.ok(scope.isDone())
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('parse error', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  scope.get('/search?media=podcast&country=us&term=' + 'dog')
+    .reply(200, (uri, body) => {
+      return 'hello, here dog'
+    })
+
+  const cache = common.freshCache()
+
+  cache.search('dog', (er, results) => {
+    t.is(er.message, 'Invalid JSON (Unexpected "h" at position 0 in state STOP)')
+    t.ok(scope.isDone())
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('socket timeout', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  scope.get('/search?media=podcast&country=us&term=' + 'dog')
+    .socketDelay(5000)
+    .reply(200, (uri, body) => {
+      return 'hello, here dog'
+    })
+
+  const cache = common.freshCache()
+
+  cache.search('dog', (er, results) => {
+    t.is(er.message, 'fanboy: socket hang up')
+    t.ok(scope.isDone())
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('no response', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  scope.get('/search?media=podcast&country=us&term=' + 'void').reply(200)
+
+  const cache = common.freshCache()
+
+  cache.search('void', (er, results) => {
+    t.is(er.message, 'nothing to read')
+    t.ok(scope.isDone())
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
 })
 
 test('database closed', t => {
   const cache = common.freshCache()
-  const f = cache.search()
+
   cache.db.close((er) => {
     if (er) throw er
-    f.on('error', (er) => {
-      t.is(er.message, 'fanboy: database closed')
+
+    cache.search('abc', (er, results) => {
+      t.is(er.message, 'Database is not open')
+      t.is(results, undefined)
       common.teardown(cache, () => {
         t.end()
       })
     })
-    f.write('abc')
   })
 })

@@ -8,18 +8,16 @@ test('defaults', (t) => {
 
   const wanted = {
     cache: { get: nop, set: nop, reset: nop },
-    cacheSize: 8388608,
     country: 'us',
-    highWaterMark: undefined,
     hostname: 'itunes.apple.com',
     max: 500,
-    media: 'all',
-    objectMode: false,
-    path: '/search',
+    media: 'podcast',
     port: 80,
     result: guid,
     ttl: 86400000
   }
+
+  nop() // 100
 
   t.deepEquals(defaults(), wanted)
 

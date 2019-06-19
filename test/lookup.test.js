@@ -5,78 +5,183 @@ const fs = require('fs')
 const nock = require('nock')
 const path = require('path')
 const test = require('tap').test
-const { Lookup } = require('../lib/lookup')
-const { FanboyTransform } = require('../lib/stream')
 
-test('internals', (t) => {
-  const obj = new Lookup()
+function createScope (protocol = 'http:') {
+  return nock(`${protocol}//itunes.apple.com`)
+    .get('/lookup?id=537879700')
+    .reply(200, (uri, body) => {
+      const p = path.join(__dirname, 'data', '537879700.json')
 
-  t.ok(obj instanceof FanboyTransform)
-  t.ok(obj instanceof Lookup)
-  t.is(obj.toString(), 'fanboy: Lookup')
-  t.is(obj.path, '/lookup')
-  t.is(typeof obj.reqOpts, 'function')
-  t.is(typeof obj._request, 'function')
-  t.is(obj.path, '/lookup')
+      return fs.createReadStream(p)
+    })
+}
 
-  t.end()
+test('uncached item 443', t => {
+  const cache = common.freshCache()
+  cache.port = 443
+
+  const scope = createScope('https:')
+
+  cache.lookup('537879700', (er, item) => {
+    if (er) throw er
+
+    t.is(item.guid, 537879700)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('uncached item', t => {
+  const scope = createScope()
+  const cache = common.freshCache()
+
+  cache.lookup('537879700', (er, item) => {
+    if (er) throw er
+
+    t.is(item.guid, 537879700)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('cached item', t => {
+  const scope = createScope()
+  const cache = common.freshCache()
+
+  cache.lookup('537879700', (er, item) => {
+    if (er) throw er
+
+    t.is(item.guid, 537879700)
+    t.ok(scope.isDone())
+
+    cache.lookup('537879700', (er, item) => {
+      if (er) throw er
+
+      t.is(item.collectionId, 537879700)
+
+      common.teardown(cache, () => {
+        t.pass('should teardown')
+        t.end()
+      })
+    })
+  })
 })
 
 test('invalid guid', (t) => {
-  t.plan(2)
   const cache = common.freshCache()
-  const f = cache.lookup()
-  f.on('error', (er) => {
-    t.is(er.message, 'fanboy: guid x is not a number')
+
+  cache.lookup('hello', (er, item) => {
+    t.is(er.message, 'invalid iTunes ID')
+    t.is(item, item, undefined)
+    t.end()
   })
-  f.on('end', () => {
-    t.pass('should end')
-  })
-  f.write('x')
-  f.end()
-  f.resume()
 })
 
-test('simple', (t) => {
-  t.plan(4)
+test('unexpected HTTP status code', t => {
   const scope = nock('http://itunes.apple.com')
-    .get('/lookup?id=537879700')
-    .reply(200, (uri, body) => {
-      t.comment(uri)
-      const p = path.join(__dirname, 'data', '537879700.json')
-      return fs.createReadStream(p)
-    })
+
+  scope.get('/lookup?id=123').reply(404)
+
   const cache = common.freshCache()
-  const f = cache.lookup()
-  f.write('537879700')
-  f.end()
-  let buf = ''
-  f.on('data', (chunk) => {
-    buf += chunk
-  })
-  f.on('end', () => {
-    const items = JSON.parse(buf)
-    t.is(items.length, 1)
-    const found = items[0]
-    t.is(found.guid, 537879700)
+
+  cache.lookup('123', (er, item) => {
+    t.is(er.message, 'unexpected HTTP status code: 404')
+    t.is(item, undefined)
     t.ok(scope.isDone())
+
     common.teardown(cache, () => {
       t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('parse error', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  scope.get('/lookup?id=123')
+    .reply(200, (uri, body) => {
+      return 'hello, here dog'
+    })
+
+  const cache = common.freshCache()
+
+  cache.lookup('123', (er, item) => {
+    t.is(er.message, 'Invalid JSON (Unexpected "h" at position 0 in state STOP)')
+    t.is(item, undefined)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('no response', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  scope.get('/lookup?id=123').reply(200)
+
+  const cache = common.freshCache()
+
+  cache.lookup('123', (er, item) => {
+    t.is(er.message, 'nothing to read')
+    t.is(item, undefined)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
+    })
+  })
+})
+
+test('socket timeout', t => {
+  const scope = nock('http://itunes.apple.com')
+
+  scope.get('/lookup?id=123')
+    .socketDelay(5000)
+    .reply(200, (uri, body) => {
+      return 'hello, here dog'
+    })
+
+  const cache = common.freshCache()
+
+  cache.lookup('123', (er, item) => {
+    t.is(er.message, 'fanboy: socket hang up')
+    t.is(item, undefined)
+    t.ok(scope.isDone())
+
+    common.teardown(cache, () => {
+      t.pass('should teardown')
+      t.end()
     })
   })
 })
 
 test('database closed', (t) => {
   const cache = common.freshCache()
-  const f = cache.lookup()
-  cache.db.close((er) => {
+
+  cache.db.close(er => {
     if (er) throw er
-    f.on('error', (er) => {
-      t.is(er.message, 'fanboy: database closed')
+
+    cache.lookup('537879700', (er, item) => {
+      t.is(er.message, 'Database is not open')
+      t.is(item, undefined)
+
       common.teardown(cache, () => {
+        t.pass('should teardown')
         t.end()
       })
     })
-    f.write('123')
   })
 })
