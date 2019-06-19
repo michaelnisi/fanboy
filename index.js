@@ -5,8 +5,9 @@ const { defaults } = require('./lib/init')
 const { search } = require('./lib/search')
 const { lookup } = require('./lib/lookup')
 const { suggest } = require('./lib/suggest')
+const { createLevelDB } = require('./lib/level')
 
-exports.Fanboy = class Fanboy {
+class Fanboy {
   /**
    * Creates a new Fanboy cache.
    * @param {*} db The [Level](https://github.com/Level) database for storage.
@@ -33,3 +34,6 @@ exports.Fanboy = class Fanboy {
     suggest(term, this, onTerms)
   }
 }
+
+exports.createLevelDB = createLevelDB
+exports.Fanboy = Fanboy

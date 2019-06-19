@@ -3,15 +3,14 @@
 exports.freshCache = freshCache
 exports.teardown = teardown
 
-const { Fanboy } = require('../../')
+const { Fanboy, createLevelDB } = require('../../')
 const rimraf = require('rimraf')
-const { createDatabase } = require('../../lib/level')
 const { defaults } = require('../../lib/init')
 
 function freshCache (custom = { media: 'podcast' }) {
   const location = '/tmp/fanboy-' + Math.floor(Math.random() * (1 << 24))
   const opts = defaults(custom)
-  const db = createDatabase(location)
+  const db = createLevelDB(location)
 
   return new Fanboy(db, opts)
 }

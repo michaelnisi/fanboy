@@ -3,19 +3,16 @@
 // A REPL to explore the fanboy API, helpful for debugging:
 // $ NODE_DEBUG=fanboy ./repl.js
 
-const { Fanboy } = require('./')
+const { Fanboy, createLevelDB } = require('./')
 const repl = require('repl')
 const { inspect } = require('util')
-const { createDatabase } = require('./lib/level')
-const { defaults } = require('./lib/init')
 const { Transform, pipeline } = require('stream')
 
-function createCache (custom = { media: 'podcast' }) {
+function createCache () {
   const location = '/tmp/fanboy-repl'
-  const opts = defaults(custom)
-  const db = createDatabase(location)
+  const db = createLevelDB(location)
 
-  return new Fanboy(db, opts)
+  return new Fanboy(db)
 }
 
 const fanboy = createCache()

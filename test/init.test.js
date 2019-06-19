@@ -12,7 +12,6 @@ test('defaults', (t) => {
     hostname: 'itunes.apple.com',
     max: 500,
     media: 'podcast',
-    objectMode: false,
     port: 80,
     result: guid,
     ttl: 86400000
