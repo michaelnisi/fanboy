@@ -109,6 +109,8 @@ The suggestions index must be populated by prior searching to yield results. You
 
 ## REPL
 
+![REPL](https://s3-eu-west-1.amazonaws.com/assets.codes.ink/fanboy/repl.png)
+
 Try the REPL, its methods let you optionally select a property by name ('collectionName') for clearer output. 
 
 ```
