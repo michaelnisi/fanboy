@@ -55,7 +55,7 @@ function createCache (custom = { media: 'podcast' }) {
   const opts = defaults(custom)
   const db = createLevelDB(location)
 
-  return new Fanboy(db)
+  return new Fanboy(db, opts)
 }
 
 const fanboy = createCache()
@@ -111,7 +111,7 @@ The suggestions index must be populated by prior searching to yield results. You
 
 ![REPL](https://s3-eu-west-1.amazonaws.com/assets.codes.ink/fanboy/repl.png)
 
-Try the REPL, its methods let you optionally select a property by name ('collectionName') for clearer output. 
+Try the REPL, its methods let you optionally select a property by name ('collectionName') for clearer output.
 
 ```
 $ ./repl
