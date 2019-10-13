@@ -63,7 +63,7 @@ function print (error, items, prop) {
 
   process.stdout.write('\n')
 
-  for (let item of items) {
+  for (const item of items) {
     writer.write([item, prop])
   }
 

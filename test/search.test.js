@@ -48,7 +48,7 @@ test('many uncached results', t => {
     t.is(results.length, 50)
     t.ok(scope.isDone())
 
-    for (let result of results) {
+    for (const result of results) {
       t.is(typeof result.collectionName, 'string')
     }
 

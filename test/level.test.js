@@ -79,7 +79,8 @@ test('termOp', function (t) {
   ]
   var now = Date.now()
   var wanted = [
-    { type: 'put',
+    {
+      type: 'put',
       key: ['fnb', 'trm', 'abc'].join(DIV),
       value: str([now].concat(keys))
     }
@@ -109,9 +110,11 @@ test('putOps', function (t) {
     { type: 'put', key: keys[0], value: str(results[0]) },
     { type: 'put', key: keys[1], value: str(results[1]) },
     { type: 'put', key: keys[2], value: str(results[2]) },
-    { type: 'put',
+    {
+      type: 'put',
       key: ['fnb', 'trm', 'abc'].join(DIV),
-      value: str([now].concat(keys)) }
+      value: str([now].concat(keys))
+    }
   ]
   var found = putOps('abc', results, now)
   t.plan(1)

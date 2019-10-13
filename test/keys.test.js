@@ -29,12 +29,16 @@ test('key', (t) => {
 test('range', (t) => {
   const f = keys.range
   const wanted = [
-    { start: ['fnb', 'trm', 'abc'].join(DIV),
+    {
+      start: ['fnb', 'trm', 'abc'].join(DIV),
       end: ['fnb', 'trm', 'abc'].join(DIV) + END,
-      limit: 50 },
-    { start: ['fnb', 'res', '123'].join(DIV),
+      limit: 50
+    },
+    {
+      start: ['fnb', 'res', '123'].join(DIV),
       end: ['fnb', 'res', '123'].join(DIV) + END,
-      limit: 50 }
+      limit: 50
+    }
   ]
   const found = [
     f(keys.TRM, 'abc'),
