@@ -1,6 +1,6 @@
 # Fanboy
 
-[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy) 💯 🐶
+[![Build Status](https://secure.travis-ci.org/michaelnisi/fanboy.svg)](http://travis-ci.org/michaelnisi/fanboy)
 
 The Fanboy [Node.js](http://nodejs.org/) package provides a caching proxy for a subset of the [iTunes Search API](https://www.apple.com/itunes/affiliates/resources/documentation/itunes-store-web-service-search-api.html).
 
@@ -38,7 +38,7 @@ The options for the Fanboy cache:
 
 ## Exports
 
-The main module exports the `Fanboy` class, a stateful cache object with a persistent [Level](https://github.com/Level/) cache and some additional in-memory caching. To access the `Fanboy` class `require('fanboy')`.
+The main module exports the `Fanboy` class, a stateful cache object with a persistent [Level](https://github.com/Level/) cache and minor in-memory black-listing. To access the `Fanboy` class `require('fanboy')`.
 
 ### Creating a new cache
 
@@ -50,12 +50,11 @@ The main module exports the `Fanboy` class, a stateful cache object with a persi
 ```js
 const { Fanboy, createLevelDB } = require('fanboy')
 
-function createCache (custom = { media: 'podcast' }) {
-  const location = '/tmp/fanboy-repl'
-  const opts = defaults(custom)
+function createCache () {
+  const location = '/tmp/fanboy'
   const db = createLevelDB(location)
 
-  return new Fanboy(db, opts)
+  return new Fanboy(db, opts())
 }
 
 const fanboy = createCache()

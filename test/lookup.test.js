@@ -150,14 +150,18 @@ test('socket timeout', t => {
 
   scope.get('/lookup?id=123')
     .socketDelay(5000)
-    .reply(200, (uri, body) => {
+    .reply(200, (uri) => {
       return 'hello, here dog'
     })
 
   const cache = common.freshCache()
 
   cache.lookup('123', (er, item) => {
-    t.is(er.message, 'fanboy: socket hang up')
+    // Finding differing error starting with 12.12.
+    t.ok([
+      'Invalid JSON (Unexpected "h" at position 0 in state STOP)',
+      'fanboy: socket hang up'
+    ].includes(er.message))
     t.is(item, undefined)
     t.ok(scope.isDone())
 
