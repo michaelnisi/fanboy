@@ -13,7 +13,7 @@
     "postversion": "npm publish",
     "pretest": "standard --fix",
     "preversion": "npm test",
-    "test": "tap test/*.js -b -j1 --80"
+    "test": "tap test/*.js -b -j1"
   },
   "dependencies": {
     "JSONStream": "^1.3.5",
