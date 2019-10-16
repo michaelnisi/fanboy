@@ -28,7 +28,12 @@ test('suggest', (t) => {
     cache.suggest('a', (er, terms) => {
       if (er) throw er
       t.deepEqual(terms, ['abc'])
-      t.end()
+
+      cache.suggest('a', 5, (er, terms) => {
+        if (er) throw er
+        t.deepEqual(terms, ['abc'])
+        t.end()
+      })
     })
   })
 })
