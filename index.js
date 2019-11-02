@@ -30,8 +30,10 @@ class Fanboy {
     lookup(guid, this, onItem)
   }
 
-  suggest (term, onTerms) {
-    suggest(term, this, onTerms)
+  suggest (term, limit, onTerms) {
+    const cb = typeof limit === 'function' ? limit : onTerms
+
+    suggest(term, this, cb)
   }
 }
 
